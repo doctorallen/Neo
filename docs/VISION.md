@@ -75,7 +75,7 @@ Title (code rain)  ─►  The apartment (hub)
   - `exile` — teleports and fires a spread
   - `agent` — mini-boss on floors 3–4: dodges your bullets in bullet time
   - **The Agent** — floor 5 boss with three phases: duel, replication (clones), and an arena-wide code storm
-- **Elites (Diablo champions):** a gold-named enemy with one or two modifiers: *Encrypted* (absorbs the first hits), *Overclocked* (fast), *Replicating* (splits on death), *Mirrored* (reflects some shots), *Volatile* (explodes on death). Elites drop better loot.
+- **Elites (Diablo champions):** a gold-named enemy with one or two modifiers: *Encrypted* (absorbs the first hits), *Overclocked* (fast), *Replicating* (splits on death), *Volatile* (explodes on death). Elites drop better loot.
 - **Hacking dressing:** glyph projectiles, hit sparks of 0s and 1s, damage numbers, enemy name tags on elites and bosses, kills dissolving into falling code, `ACCESS GRANTED` on clear, screen glitch on hits, and CRT scanlines (a setting).
 
 ## Loot
