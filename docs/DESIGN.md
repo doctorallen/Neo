@@ -1,6 +1,6 @@
 # NEO — Design specification
 
-This expands `VISION.md` into concrete features, numbers and screens. Units: world pixels (px), seconds (s). Tunable numbers live in `js/tuning.js`.
+This expands `VISION.md` into concrete features, numbers and screens. **After four design reviews, `docs/REVIEWS.md` and `js/tuning.js` supersede the numbers here wherever they differ.** Units: world pixels (px), seconds (s). Tunable numbers live in `js/tuning.js`.
 
 ## 1. Screen and layout (portrait first)
 

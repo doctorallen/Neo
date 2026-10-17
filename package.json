@@ -1,0 +1,19 @@
+{
+  "name": "neo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "NEO, a five-minute Matrix-inspired pixel-art roguelite for the phone browser, in plain JavaScript. The game itself needs nothing installed: these are the test tools only.",
+  "scripts": {
+    "test": "sh test/check.sh && node test/gen.js && node test/loot.js && node test/save.js && node test/smoke.js && node test/bot.js",
+    "check": "sh test/check.sh",
+    "gen": "node test/gen.js",
+    "gen:update": "node test/gen.js --update",
+    "loot": "node test/loot.js",
+    "save": "node test/save.js",
+    "smoke": "node test/smoke.js",
+    "bot": "node test/bot.js"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.13.0"
+  }
+}
