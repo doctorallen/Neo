@@ -243,14 +243,20 @@ function drawCollapse(ctx, room) {
 // ---------------------------------------------------------------------------
 function drawPlayer(ctx, p) {
   const set = p.coat ? SPR.neo.coat : SPR.neo.shirt;
+  // which way he's seen from: the aim while hacking, else the way he walks,
+  // else the way he last faced
+  const mv = Input.move, moving = Input.moving() && Game.scene !== 'title';
+  if (p.firing && p.aimAng !== null) { const ax = Math.cos(p.aimAng), ay = Math.sin(p.aimAng); p.view = Math.abs(ay) > Math.abs(ax) * 1.2 ? (ay > 0 ? 'down' : 'up') : 'side'; }
+  else if (moving) p.view = Math.abs(mv.y) > Math.abs(mv.x) * 1.2 ? (mv.y > 0 ? 'down' : 'up') : 'side';
+  const vset = p.view === 'down' || p.view === 'up' ? set[p.view] : null;
   const flip = p.facing < 0;
   for (const a of p.afterimages) blit(ctx, SPR.neo.coat.phase || set.idle[0], a.x, a.y, { flip: a.f < 0, alpha: (a.t / 0.25) * 0.5 });
   if (p.invulnT > 0 && p.phaseT <= 0 && Math.floor(Game.realT * 16) % 2 === 0) return;
   let img;
   if (p.phaseT > 0) img = SPR.neo.coat.phase || set.idle[0];
-  else if (Input.moving() && Game.scene !== 'title') img = set.walk[Math.floor(p.walkT * 8) % set.walk.length];
-  else if (p.firing && set.type) img = set.type[Math.floor(p.anim * 10) % set.type.length];
-  else img = set.idle[Math.floor(p.anim * 1.6) % set.idle.length];
+  else if (moving) img = (vset || set).walk[Math.floor(p.walkT * 8) % 4];
+  else if (p.firing && set.type && !vset) img = set.type[Math.floor(p.anim * 10) % set.type.length];
+  else img = (vset || set).idle[Math.floor(p.anim * 1.6) % 2];
   blit(ctx, img, p.x, p.y, { flip, tint: p.hurtT > 0.15 ? '#ff6070' : null, alpha: p.phaseT > 0 ? 0.7 : 1 });
   // compiling: holding fire long enough to fire faster throws off sparks of code
   if (p.firing && p.fireHeldT >= T.player.compileAfter && !Game.bt) {

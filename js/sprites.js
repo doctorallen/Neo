@@ -260,6 +260,75 @@ function spr_neoFrame(kind, pose, f) {
   return g;
 }
 
+// Facing the camera (walking down) and facing away (walking up). The same
+// 13×18 grid and feet as the side frames, so the anchor doesn't move.
+const spr_NEO_HEAD_V = {
+  coatdown: ['..hhh..', '.hHHHh.', 'hhssshh', 'hgGsgGh', '.sssss.', '..SsS..'],
+  shirtdown: ['..hhh..', '.hHHHh.', 'hhssshh', 'hsesesh', '.sssss.', '..SsS..'],
+  up: ['..hhh..', '.hHHHh.', 'hhHHhhh', 'hhhhhhh', '.hhhhh.', '..sSs..'],
+};
+const spr_NEO_COAT_V = {
+  // open down the front over the black shirt
+  down: ['....LCkCL....', '..LCCckcCCL..', '..LCcckccCL..', '..LCcckccCL..', '..LCcckccCL..', '..LCcckccCL..', '..LCcckccCL..', '..LCcckccCL..', '..LCcckccCL..'],
+  // the back, with the vent
+  up: ['....LCCCL....', '..LCCccccCL..', '..LCcccccCL..', '..LCcccccCL..', '..LCcccccCL..', '..LCcccccCL..', '..LCcccccCL..', '..LCcckccCL..', '..LCcckccCL..'],
+};
+const spr_NEO_HEM_V = {
+  idle: ['..LCcckccCL..', '..LCck.kcCL..'],
+  a: ['..LCcckccCL..', '..LCck.kcCLk.'],
+  b: ['..LCcckccCL..', '.kLCck.kcCL..'],
+};
+// one foot lifted a row on each stride
+const spr_NEO_LEGS_COAT_V = {
+  idle: ['....pp.pp....', '....pp.pp....', '...bBB.BBb...'],
+  a: ['....pp.pp....', '....pp.BBb...', '...bBB.......'],
+  b: ['....pp.pp....', '...bBB.pp....', '.......BBb...'],
+};
+const spr_NEO_SHIRT_V = ['....TtttT....', '...TTtttTu...', '...TttttTu...', '...TttttTu...', '...TttttTu...', '...TttttTu...', '...uuuuuuu...'];
+const spr_NEO_LEGS_SHIRT_V = {
+  idle: ['...jjjjjjj...', '....Jj.jJ....', '....Jj.jJ....', '....Jj.jJ....', '...ff...ff...'],
+  a: ['...jjjjjjj...', '....Jj.jJ....', '....Jj.jJ....', '....Jj.ff....', '...ff........'],
+  b: ['...jjjjjjj...', '....Jj.jJ....', '....Jj.jJ....', '....ff.jJ....', '........ff...'],
+};
+
+// One Neo frame seen from the front or the back. view: 'down' | 'up'.
+function spr_neoFrameV(kind, view, pose, f) {
+  const coat = kind === 'coat';
+  const g = spr_grid(13, 18);
+  let by = 1, headDy = 0, stride = 'idle', swing = 0;
+  if (pose === 'idle') headDy = f === 1 ? 1 : 0;
+  if (pose === 'walk') {
+    by = f % 2 === 1 ? 0 : 1;
+    stride = f === 0 ? 'a' : f === 2 ? 'b' : 'idle';
+    swing = f === 0 ? 1 : f === 2 ? -1 : 0;
+  }
+  if (coat) spr_stamp(g, spr_NEO_LEGS_COAT_V[stride], 0, 15);
+  else spr_stamp(g, spr_NEO_LEGS_SHIRT_V[stride], 0, 13);
+  // arms hang at his sides; the one on the side of the lifted foot swings back (shorter)
+  const armL = by + 10 - (swing < 0 ? 1 : 0), armR = by + 10 - (swing > 0 ? 1 : 0);
+  if (coat) {
+    for (let y = by + 6; y <= armL; y++) spr_put(g, 1, y, y < by + 8 ? 'L' : 'C');
+    for (let y = by + 6; y <= armR; y++) spr_put(g, 11, y, y < by + 8 ? 'C' : 'c');
+  } else {
+    for (let y = by + 6; y <= armL; y++) spr_put(g, 2, y, y < by + 8 ? 'T' : 's');
+    for (let y = by + 6; y <= armR; y++) spr_put(g, 10, y, y < by + 8 ? 'u' : 'S');
+  }
+  const hand = view === 'up' ? 'S' : 's';
+  spr_put(g, coat ? 1 : 2, armL + 1, hand); spr_put(g, coat ? 11 : 10, armR + 1, hand);
+  if (coat) {
+    spr_stamp(g, spr_NEO_COAT_V[view], 0, by + 5);
+    spr_stamp(g, spr_NEO_HEM_V[stride], 0, by + 14);
+    // the lifted foot shows in front of the hem
+    if (stride === 'a') spr_stamp(g, ['BBb'], 7, 16);
+    if (stride === 'b') spr_stamp(g, ['bBB'], 3, 16);
+  } else {
+    spr_stamp(g, spr_NEO_SHIRT_V, 0, by + 6);
+  }
+  const head = view === 'up' ? spr_NEO_HEAD_V.up : coat ? spr_NEO_HEAD_V.coatdown : spr_NEO_HEAD_V.shirtdown;
+  spr_stamp(g, head, 3, by + headDy);
+  return g;
+}
+
 function spr_neo() {
   const ink = '#8cffb0';
   const mk = (kind, pose, f) => spr_fromGrid(spr_neoFrame(kind, pose, f), spr_NEO_PAL, ink, 6);
@@ -273,6 +342,13 @@ function spr_neo() {
     idle: [mk('shirt', 'idle', 0), mk('shirt', 'idle', 1)],
     walk: [0, 1, 2, 3].map((f) => mk('shirt', 'walk', f)),
   };
+  // walking down (towards the camera) and up (away)
+  const mkV = (kind, view, pose, f) => spr_fromGrid(spr_neoFrameV(kind, view, pose, f), spr_NEO_PAL, ink, 6);
+  for (const [set, kind] of [[coat, 'coat'], [shirt, 'shirt']]) {
+    for (const view of ['down', 'up']) {
+      set[view] = { idle: [0, 1].map((f) => mkV(kind, view, 'idle', f)), walk: [0, 1, 2, 3].map((f) => mkV(kind, view, 'walk', f)) };
+    }
+  }
   return { coat, shirt, asleep: spr_neoAsleep() };
 }
 

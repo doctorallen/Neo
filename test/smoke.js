@@ -70,6 +70,14 @@ async function phone(browser) {
   await drag(page, deck[0] - 60, deck[1], 40, 0, 30);
   const after = await page.evaluate(() => [Game.player.x, Game.player.y]);
   check(after[0] > before[0] + 4, `phone: dragging right didn't move Neo (${before} → ${after})`);
+  // walking down and up shows him from the front and the back
+  const views = await page.evaluate(() => {
+    const out = [];
+    for (const y of [1, -1]) { Input.bot = { x: 0, y }; for (let i = 0; i < 10; i++) Game.step(1 / 60); Game.render(); out.push(Game.player.view); }
+    Input.bot = null; Input.update();
+    return out.concat([SPR.neo.shirt.down.walk.length, SPR.neo.coat.up.walk.length]);
+  });
+  check(views.join() === 'down,up,4,4', `phone: no front or back walk for Neo: ${views}`);
   // in the apartment the aim side of the deck moves him too
   const b1 = await page.evaluate(() => Game.player.x);
   await drag(page, deck[0] + 60, deck[1], -40, 0, 30);
