@@ -102,7 +102,7 @@ function updateFight(dt) {
   const room = Game.room, f = room && room.fight;
   if (!f || room.cleared) return;
   if (f.wave < 0) {
-    if (room.kind === 'boss' && room.introT > 0) return;
+    if (room.kind === 'boss' && room.introT > 0) { room.introT -= dt; return; }
     f.startT -= dt;
     if (f.startT <= 0) spawnWave(room, 0);
     return;
@@ -441,12 +441,25 @@ function pickZeroDayId(rng) {
   return pool.length ? rng.pick(pool) : null;
 }
 
-function dropItem(x, y, item) {
-  const a = Math.random() * Math.PI * 2;
-  Game.drops.push({ kind: 'item', item, x, y, tx: x + Math.cos(a) * 8, ty: y + Math.sin(a) * 6, t: 0, id: item.id });
+// Loot pops a little way from where it fell, but never into a wall: it has
+// to stay where Neo can walk to it.
+function dropSpot(x, y) {
+  const room = Game.room, me = { r: 4, isPlayer: true };
+  if (circleBlocked(room, x, y, 4, me)) { const f = nearestFloor(room, x / TILE, y / TILE); if (f) { x = (f[0] + 0.5) * TILE; y = (f[1] + 0.5) * TILE; } }
+  for (let i = 0; i < 8; i++) {
+    const a = Math.random() * Math.PI * 2, tx = x + Math.cos(a) * 8, ty = y + Math.sin(a) * 6;
+    if (!circleBlocked(room, tx, ty, 4, me)) return [x, y, tx, ty];
+  }
+  return [x, y, x, y];
+}
+
+function dropItem(x0, y0, item) {
+  const [x, y, tx, ty] = dropSpot(x0, y0);
+  Game.drops.push({ kind: 'item', item, x, y, tx, ty, t: 0, id: item.id });
   Sound.play('pickup_' + Math.min(4, item.rarity), { vol: 0.5 });
 }
 
-function dropOrb(x, y) {
-  Game.drops.push({ kind: 'orb', x, y, tx: x, ty: y, t: 0 });
+function dropOrb(x0, y0) {
+  const [x, y, tx, ty] = dropSpot(x0, y0);
+  Game.drops.push({ kind: 'orb', x, y, tx, ty, t: 0 });
 }

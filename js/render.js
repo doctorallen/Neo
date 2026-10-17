@@ -92,7 +92,7 @@ function roomBackground(room) {
   // obstacles stand up off the floor: a lid above, a face below
   for (let ty = 0; ty < room.h; ty++)
     for (let tx = 0; tx < room.w; tx++) {
-      if (room.t(tx, ty) !== BLOCK) continue;
+      if (room.t(tx, ty) !== BLOCK || room.furnished) continue;
       const px = tx * TILE, py = ty * TILE, h = hashInts(room.seed, tx, ty, 3);
       const aboveBlock = room.t(tx, ty - 1) === BLOCK;
       x.drawImage(tiles.wallFace[h % 2], 0, 8, 16, 8, px, py + 8, 16, 8);

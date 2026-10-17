@@ -19,7 +19,8 @@ function buildApartment() {
   room.doors = { n: { to: null, hidden: false, apartment: true } };
   fillRoomTiles(room, ROOM_TEMPLATES.small[0], false, false);
   // the desk and the bed are solid
-  for (const [tx, ty] of [[1, 1], [2, 1], [3, 1], [8, 6], [9, 6], [8, 7], [9, 7], [8, 8], [9, 8], [10, 6], [10, 7], [10, 8]]) room.set(tx, ty, BLOCK);
+  for (const [tx, ty] of [[1, 1], [2, 1], [3, 1], [9, 7], [9, 8]]) room.set(tx, ty, BLOCK);
+  room.furnished = true; // solid tiles under furniture are drawn as floor
   room.cleared = true;
   room.props = [];
   room.wallDecor = [{ kind: 'clock', tx: 8 }, { kind: 'poster', tx: 10 }];
@@ -34,9 +35,9 @@ function hubScript(full, won) {
   const S = [];
   S.push({ k: 'sleep', d: won ? 3.0 : full ? 2.0 : 1.2, rootAccess: won });
   if (full) {
-    S.push({ k: 'type', text: 'Wake up, Neo…', hold: 1.2 });
+    S.push({ k: 'type', text: 'Wake up, Neo...', hold: 1.2 });
     S.push({ k: 'stir', d: 0.8 });
-    S.push({ k: 'type', text: 'The Matrix has you…', hold: 1.2 });
+    S.push({ k: 'type', text: 'The Matrix has you...', hold: 1.2 });
     S.push({ k: 'type', text: 'Follow the white rabbit.', hold: 1.0 });
     S.push({ k: 'type', text: 'Knock, knock, Neo.', hold: 0.3 });
   } else {
@@ -133,7 +134,7 @@ function updateHub(dt) {
   if (nearDoor && !h.doorOpen) {
     h.doorOpen = 0.001;
     Sound.play('door_creak');
-    UI.feed('> …');
+    UI.feed('> ...');
     if (!Save.meta.introSeen) h.tailT = 0.5; // a white tail, whisking round the corner
     Save.meta.introSeen = true; Save.write();
   }

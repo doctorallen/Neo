@@ -100,7 +100,7 @@ let _itemSerial = 1;
 function rollItem(rng, opts = {}) {
   const ilvl = clamp(opts.ilvl || 1, 1, 5);
   const pool = zeroDayPool();
-  const allowZD = (opts.allowZeroDay !== false) && pool.length > 0 && (Save.meta.reached2 || opts.zeroDay);
+  const allowZD = opts.allowZeroDay !== false && pool.length > 0 && !!(Save.meta.reached2 || opts.zeroDay);
   let rarity = opts.zeroDay ? 4 : opts.rarity !== undefined ? opts.rarity : rollRarity(rng, opts.luck || 0, opts.min || 0, allowZD);
   let zd = null;
   if (rarity === 4) {

@@ -678,7 +678,7 @@ function startRain() {
     const r = c.getBoundingClientRect();
     c.width = Math.max(1, Math.floor(r.width / 2)); c.height = Math.max(1, Math.floor(r.height / 2));
     const n = Math.ceil(c.width / 6);
-    Rain.cols = Array.from({ length: n }, () => ({ y: Math.random() * -c.height, v: 20 + Math.random() * 50 }));
+    Rain.cols = Array.from({ length: n }, () => ({ y: Math.random() * c.height - 20, v: 20 + Math.random() * 50 }));
   };
   fit();
   const x = c.getContext('2d');
