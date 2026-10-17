@@ -204,7 +204,12 @@ function installBot() {
         if (run.floorN !== floor) { out.floors.push({ n: floor, time: +(run.time - floorStart).toFixed(1) }); floor = run.floorN; floorStart = run.time; }
         if (Game.room !== lastRoom) { if (lastRoom) out.rooms.push(`${run.floorN}:${lastRoom.kind}:${(run.time - roomAt).toFixed(1)}`); lastRoom = Game.room; roomAt = run.time; }
         // too long in one room: something's wrong
-        if (run.time - roomAt > 90 && !Game.modal) { out.stuck.push(`90 s in a ${Game.room.kind} room on floor ${run.floorN} (${Game.enemies.filter((e) => !e.dead).length} left, sealed ${roomSealed()})`); break; }
+        if (run.time - roomAt > 90 && !Game.modal) {
+          const room = Game.room, p = Game.player;
+          const detail = `p=${p.x | 0},${p.y | 0} drops=[${Game.drops.map((d) => `${d.kind}@${d.x | 0},${d.y | 0}${d.blocked ? ' blocked' : ''}`).join(' ')}] props=[${room.props.map((q) => `${q.kind}@${q.tx},${q.ty}${q.open ? ' open' : ''}${q.spent ? ' spent' : ''}${q.answered ? ' answered' : ''}`).join(' ')}] critters=[${Game.critters.map((c) => `${c.kind}@${c.x | 0},${c.y | 0} t${c.t.toFixed(1)}`).join(' ')}] doors=[${Object.entries(room.doors).map(([d, l]) => `${d}:${l.to.kind}${l.hidden ? ' hidden' : ''}`).join(' ')}] next=${this.nextRoom()} bot=${JSON.stringify(Input.bot)} flow=${Game.flow && Game.flow.kind} transition=${!!Game.transition}`;
+          out.stuck.push(`90 s in a ${room.kind} room on floor ${run.floorN} (${Game.enemies.filter((e) => !e.dead).length} left, sealed ${roomSealed()}) ${detail}`);
+          break;
+        }
         if (run.ended) break;
       }
       const run = Game.run;
