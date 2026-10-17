@@ -128,7 +128,13 @@ function installBot() {
       const p = Game.player, run = Game.run;
       // a packet about to land: phase across its path, or step aside
       let threat = null, tmin = 0.45;
+      // a human sees a packet a moment after it's fired, and misses some
+      const sk = this.skill;
       for (const b of Game.bullets) {
+        if (sk) {
+          if (b._seenAt === undefined) { b._seenAt = Game.realT; b._noticed = Math.random() < sk.notice; }
+          if (!b._noticed || Game.realT - b._seenAt < sk.react) continue;
+        }
         const rx = b.x - p.x, ry = b.y - (p.y - 4), vx = b.vx, vy = b.vy;
         const v2 = vx * vx + vy * vy;
         const t = -(rx * vx + ry * vy) / (v2 || 1);
@@ -138,7 +144,7 @@ function installBot() {
       }
       let near = null, nd = Infinity;
       for (const e of live) { const d = dist(e.x, e.y, p.x, p.y); if (d < nd) { nd = d; near = e; } }
-      const charging = Game.enemies.some((e) => !e.dead && (e.state === 'dash' || e.state === 'lunge' || e.state === 'charge') && dist(e.x, e.y, p.x, p.y) < 50);
+      const charging = Game.enemies.some((e) => !e.dead && (e.state === 'dash' || e.state === 'lunge' || e.state === 'charge') && dist(e.x, e.y, p.x, p.y) < 50 && (!sk || Math.random() < sk.notice * 0.2));
       const storm = Game.hazards.find((h) => h.kind === 'storm' && p.x >= h.x0 - 3 && p.x < h.x1 + 3);
       if ((threat || charging) && p.phaseCdT <= 0) {
         const src = threat || near;
@@ -178,8 +184,11 @@ function installBot() {
     },
 
     // Plays until the run ends or `seconds` of game time pass.
-    play({ god = false, seconds = 900 } = {}) {
+    // skill: null plays perfectly; { react, notice } gives it a human's
+    // reaction time and attention
+    play({ god = false, seconds = 900, skill = null } = {}) {
       Game.debug.god = god;
+      this.skill = skill;
       const out = { rooms: [], floors: [], end: null, hpLow: 1, stuck: [], errors: [], steps: 0, modals: 0 };
       let floor = Game.run.floorN, floorStart = Game.run.time, lastRoom = null, roomAt = 0;
       const maxSteps = seconds * 60;

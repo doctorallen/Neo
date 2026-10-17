@@ -53,13 +53,13 @@ const T = {
   },
 
   // Enemy scaling by floor (n from 1) and depth (d from 1).
-  enemyHp: (n, d) => (1 + 0.4 * (n - 1)) * (1 + 0.25 * (d - 1)),
-  enemyDmg: (n, d) => (1 + 0.25 * (n - 1)) * (1 + 0.15 * (d - 1)),
+  enemyHp: (n, d) => (1 + 0.35 * (n - 1)) * (1 + 0.25 * (d - 1)),
+  enemyDmg: (n, d) => 1.1 * (1 + 0.3 * (n - 1)) * (1 + 0.15 * (d - 1)),
 
   enemyBullet: { radius: 2, maxAlive: 18, maxAliveBoss: 30 },
   spawnTelegraph: 0.6, spawnGrace: 1.0, spawnMinDist: 56,
   maxRanged: 2,
-  budget: (n) => 5 + 3 * n,
+  budget: (n) => 4 + 3 * n,
   secondWave: 0.4, secondWaveAt: 0.75,
 
   enemies: {

@@ -20,6 +20,23 @@ function tintOf(src, col) {
   if (!t) { t = tinted(src, col); _tintCache.set(key, t); }
   return t;
 }
+// Colours a light-grey sprite while keeping its shading (loot icons by rarity).
+function shadeOf(src, col) {
+  if (!src._tid) src._tid = ++_tintSerial;
+  const key = 'm' + src._tid + col;
+  let t = _tintCache.get(key);
+  if (!t) {
+    const [c, x] = makeCanvas(src.width, src.height);
+    x.drawImage(src, 0, 0);
+    x.globalCompositeOperation = 'multiply';
+    x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
+    x.globalCompositeOperation = 'destination-in';
+    x.drawImage(src, 0, 0);
+    c.ax = src.ax; c.ay = src.ay;
+    _tintCache.set(key, t = c);
+  }
+  return t;
+}
 const _flipCache = new WeakMap();
 function flipOf(src) {
   let f = _flipCache.get(src);
@@ -338,7 +355,7 @@ function drawDrop(ctx, d) {
   const icon = SPR.icons[it.slot];
   const x = Math.round(d.x), y = Math.round(d.y - (d.z || 0) + bob);
   ctx.fillStyle = '#000'; ctx.fillRect(x - 5, y + 1, 10, 1);
-  blit(ctx, icon, x, y + 1, { tint: col });
+  blit(ctx, shadeOf(icon, mix(col, '#ffffff', 0.25)), x, y + 1);
   if (d.near || roomSealed()) drawText3(ctx, it.name.length > 22 ? it.name.slice(0, 21) + '…' : it.name, x, y - 18, col, { align: 'center' });
 }
 
