@@ -1,10 +1,10 @@
 # NEO — Vision
 
-> *"Have you ever had a dream, Neo, that you were so sure was real?"*
+> *"Have you ever had a dream, Neo, that you were so sure was real?"* — Morpheus (a line for this document only; the game never says it)
 
 ## One line
 
-A five-minute, one-thumb, portrait-mode pixel-art roguelite for the phone browser: you wake at your desk, open the door to nobody, and walk out into a generated digital dungeon where every fight is a hack. Loot drops like Diablo, and every death wakes you at the desk again.
+A five-minute, one-thumb, portrait-mode pixel-art roguelite for the phone browser: you wake at your desk, open the door to nobody, and walk out into a generated digital dungeon where every fight is a hack. Loot drops like Diablo, and every run, won or lost, ends back at the desk where Neo still sleeps.
 
 ## The original ask, restated
 
@@ -13,14 +13,14 @@ A five-minute, one-thumb, portrait-mode pixel-art roguelite for the phone browse
 | Pixel art, Matrix-inspired dungeon crawler roguelite | Low-res pixel canvas (192 px wide), green-on-black phosphor palette, code-rain, glyph bullets, generated room-based dungeon, permadeath runs |
 | Diablo-like random loot | Five rarity tiers, item level by floor, random affixes, legendary uniques, elite packs with modifiers, a side-by-side compare card |
 | Roguelite elements | Permadeath runs; perks picked on each floor ("patches"); persistent currency spent on permanent upgrades at the desk terminal; unlocks |
-| Plays on a phone in portrait, simple controls | One-thumb floating joystick; you auto-attack the nearest target while standing still (Archero style); two big buttons (Phase dash and Bullet Time) |
-| Finish a session in 5 minutes | 4 floors plus a boss floor, about 50 s each; a full winning run takes about 4–5 minutes; dying earlier is shorter |
+| Plays on a phone in portrait, simple controls | One-thumb floating joystick in the bottom control deck; you auto-attack the nearest target while standing still (Archero style); a quick flick dashes (Phase); one button for Bullet Time (plus an optional Phase button for two-thumb players) |
+| Finish a session in 5 minutes | 4 short floors (4–5 small rooms each) plus a boss floor; about 45 s a floor; a winning run takes about 4–4.5 minutes, measured by a headless bot; dying earlier is shorter |
 | Sci-fi / cyberpunk | Dream-version of a hacker's world: server farms, subway, a neon "city grid", sentinels and agents |
 | Opens like "Wake up, Neo" | A playable cold open: Neo asleep at a CRT; it types *Wake up, Neo…*, *The Matrix has you…*, *Follow the white rabbit.*, *Knock, knock, Neo.*; there's a knock; you get up and open the door to an empty hallway |
 | Walk out into a random dungeon, no going back | Stepping through the door glitches the hallway into floor 1; the door dissolves behind you; floors only go forward (the exit is a ringing payphone) |
 | Fighting feels like hacking | Enemies are processes with names (`sentinel.exe`), HP is *integrity*, bullets are code glyphs, kills "terminate" a process into falling code, chests must be *decrypted*, cleared rooms print `ACCESS GRANTED` |
-| Neo is still asleep, and the player doesn't know | Never said outright. Hints: the wall clock always reads 3:14; the knock with nobody there; déjà-vu cats; the Oracle's line. Dying or winning both end the same way: Neo jolts awake at the desk and the screen types *Wake up, Neo…* again. The loop itself is the tell |
-| JavaScript in the browser; GitHub Pages like merryfolk | Plain JS, no build step, no runtime dependencies, works from `file://`; puppeteer tests; a `pages.yml` that checks, tests, then deploys `main` |
+| Neo is still asleep, and the player doesn't know | Never said and never shown. After every run, won or lost, the game cuts back to the **identical opening shot**: Neo slumped asleep at the CRT, and *Wake up, Neo…* typing again. Players read it as a respawn. Observant ones notice he never woke up. Small tells: the clock is always 3:14; process names like `hypnos.d` and `rem_cycle`; a mirror in the tenement where Neo's eyes are closed; the white-rabbit room's window looks into his apartment, where he is asleep at the desk |
+| JavaScript in the browser; GitHub Pages like merryfolk | Plain JS, no build step, no runtime dependencies (font bundled), works from `file://`; puppeteer tests; a new public GitHub repo **`Neo`** with Pages served from GitHub Actions; a `pages.yml` that checks, tests, then deploys `main` only when the tests pass |
 
 ## Pillars
 
@@ -40,15 +40,17 @@ Title (code rain)  ─►  The apartment (hub)
    Floor 1 ─► patch pick ─► Floor 2 ─► … ─► Floor 4 ─► patch pick ─► Floor 5: the Agent
      │ death                                                          │ victory
      ▼                                                                ▼
-   "CONNECTION LOST" summary ─► Neo jolts awake at the desk ◄─ "…" summary
+   "CONNECTION LOST" summary ─► the opening shot again: ◄─ "ROOT ACCESS" summary
+                                Neo asleep, "Wake up, Neo…"
 ```
 
 - **First launch:** the full cold open (about 30 s, skippable after the first time).
-- **Later runs:** you wake at the desk in seconds (*Wake up, Neo.*, knock). Walk to the terminal to spend Data, or to the door to dive.
+- **Later runs:** the same shot of Neo asleep; *Wake up, Neo.* types, there's a knock, and he lifts his head (in seconds). Walk to the terminal to spend Data, or to the door to dive.
+- **After the first win:** **Depth** unlocks at the terminal: deeper dreams with tougher processes, richer loot and more Data (five depths). It's the long-term chase.
 
 ## The dungeon
 
-- **Rooms on a grid,** like Isaac: each floor is a branching map of about 6–8 rooms. Doors seal while hostile processes are alive ("FIREWALL ACTIVE") and open when the room is clear.
+- **Rooms on a grid,** like Isaac: each floor is a short, mostly linear map of 4–5 small rooms with a side branch for the cache. Doors seal while hostile processes are alive ("FIREWALL ACTIVE") and open when the room is clear.
 - **Room kinds:** the entry room, combat rooms, one **cache** (a loot chest to decrypt), sometimes a **terminal** (an Oracle event: a choice with a cost), sometimes a hidden **white rabbit** room, and the **exit room** with the ringing payphone. Answering the phone takes you to the next floor, with no way back.
 - **Floors (sectors)** change the palette, the tiles and the enemy mix:
   1. *Tenement* — the dream-version of Neo's building: corridors and flickering lights
@@ -60,8 +62,8 @@ Title (code rain)  ─►  The apartment (hub)
 
 ## Combat (the hack)
 
-- **Move** with the floating joystick. **Stand still to execute** your equipped exploit at the nearest process in sight, firing automatically. Moving stops firing, so positioning is the skill. A setting allows firing while moving, at reduced damage.
-- **Phase** (dash button): a short glitch-dash with invulnerability frames that leaves afterimages, on a short cooldown.
+- **Move** with the floating joystick (it lives in the control deck, so your thumb never covers the room). **Stand still to execute** your equipped exploit at the nearest process in sight, firing automatically. Moving stops firing, so positioning is the skill. A setting allows firing while moving, at reduced damage.
+- **Phase** (a quick flick of the thumb, or the optional button): a short glitch-dash with invulnerability frames that leaves afterimages, on a short cooldown.
 - **Bullet Time** (focus button): charged by dealing damage; slows the world to 25% for 3 s while you move at full speed. It's the "Matrix moment" and the panic button.
 - **Integrity** is your HP. It's restored by green *patch* orbs that drop rarely and by some affixes.
 - **Enemies (processes):**
@@ -99,9 +101,10 @@ Title (code rain)  ─►  The apartment (hub)
 
 - **Phone (portrait):**
   - The screen is split: the room view at the top and a control deck at the bottom (terminal style, about 35% of the height)
-  - Touch anywhere in the deck (or the room) and drag: a floating joystick appears under your thumb
+  - Touch anywhere in the deck and drag: a floating joystick appears under your thumb
   - Release to stand still and fire
-  - Two large round buttons on the right of the deck: **PHASE** and **FOCUS** (swapped to the left in left-handed mode)
+  - A quick flick (a short, fast swipe and release) phases in that direction
+  - Two large round buttons on the right of the deck: **FOCUS**, and **PHASE** for anyone playing with two thumbs (swapped to the left in left-handed mode)
   - A small pause button at the top right
 - **Desktop:** WASD or arrows to move, Space to phase, Shift or E for focus, Esc to pause. This is mainly for testing, but fully playable.
 - Haptics on hit and pickup where the browser supports it.
@@ -134,14 +137,15 @@ Title (code rain)  ─►  The apartment (hub)
   - It's rendered into a 192-px-wide buffer and scaled by whole pixels with smoothing off.
   - Neo has a long black coat and shades; enemies are distinct silhouettes.
 - **Palette:** phosphor greens on near-black, with one accent colour per floor (amber in the tenement, cyan in the server farm, sodium yellow in the subway, magenta on the grid, white-hot in the core). Rarity colours stay consistent everywhere.
-- **Type:** a terminal font (VT323, with a monospace fallback) for menus, and a tiny built-in pixel font inside the canvas.
+- **Type:** a terminal font (VT323, bundled with its open font licence so it works offline) for menus, and a tiny built-in pixel font inside the canvas.
 - **Sound:** all synthesised with Web Audio: the knock, glyph blips, terminations, decrypt chirps, phone ring, bullet-time *whum*, and a dark pulsing synth score that tightens on the boss.
 
 ## Out of scope (for this build)
 
 - Multiplayer, accounts, servers, or a leaderboard beyond this device
 - Additional playable characters (Trinity and Morpheus are noted as future ideas)
-- Native app wrappers; it's a website that can be added to the home screen (a PWA manifest is in scope)
+- Native app wrappers; it's a website that can be added to the home screen (a PWA manifest is in scope, but no service worker, so a deploy is never hidden behind a stale cache)
+- Balance is set by reasoning plus headless bot runs, with no human playtest; expect tuning after you play
 
 ## Success criteria
 
