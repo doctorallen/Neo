@@ -248,7 +248,6 @@ Base values at floor 1. HP ×(1 + 0.4·(floor−1)), damage ×(1 + 0.15·(floor�
     - *Encrypted* — a 40% shield bar that must break first
     - *Overclocked* — +45% speed and attack rate
     - *Replicating* — splits into 2 copies at 30% HP on death
-    - *Mirrored* — 25% of your shots bounce back
     - *Volatile* — explodes for 20 damage (radius 28 px) 0.6 s after death, telegraphed
 - **Exit-room guards:**
   - Floors 1–2: an elite pack (one elite plus the normal budget)
