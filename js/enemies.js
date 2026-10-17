@@ -104,6 +104,9 @@ function updateFight(dt) {
   if (f.wave < 0) {
     if (room.kind === 'boss' && room.introT > 0) { room.introT -= dt; return; }
     f.startT -= dt;
+    // the very first fight waits for Neo to move (or three seconds), so the
+    // first hint has a moment to land
+    if (room.tutorial && !f.moved) { f.moved = Game.player.moveT > 0 || f.startT < -3; if (!f.moved) return; }
     if (f.startT <= 0) spawnWave(room, 0);
     return;
   }

@@ -224,6 +224,11 @@ function drawPlayer(ctx, p) {
   else if (p.firing && set.type) img = set.type[Math.floor(p.anim * 10) % set.type.length];
   else img = set.idle[Math.floor(p.anim * 1.6) % set.idle.length];
   blit(ctx, img, p.x, p.y, { flip, tint: p.hurtT > 0.15 ? '#ff6070' : null, alpha: p.phaseT > 0 ? 0.7 : 1 });
+  // compiling: standing still long enough to fire faster throws off sparks of code
+  if (p.firing && p.stillT >= T.player.compileAfter && !Game.bt) {
+    ctx.fillStyle = Math.random() < 0.5 ? '#3cff6e' : '#b8ffc8';
+    ctx.fillRect(Math.round(p.x + p.facing * (5 + Math.random() * 3)), Math.round(p.y - 8 - Math.random() * 6), 1, 1);
+  }
   if (p.daemon) { ctx.fillStyle = '#8cffb0'; ctx.fillRect(Math.round(p.daemon.x) - 1, Math.round(p.daemon.y) - 1, 3, 3); ctx.fillStyle = '#0a2a14'; ctx.fillRect(Math.round(p.daemon.x), Math.round(p.daemon.y), 1, 1); }
   // integrity over his head once he's been hurt
   const run = Game.run;
