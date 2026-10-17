@@ -389,7 +389,31 @@ function drawDrop(ctx, d) {
   const x = Math.round(d.x), y = Math.round(d.y - (d.z || 0) + bob);
   ctx.fillStyle = '#000'; ctx.fillRect(x - 5, y + 1, 10, 1);
   blit(ctx, shadeOf(icon, mix(col, '#ffffff', 0.25)), x, y + 1);
+  drawDropVerdict(ctx, d, x + 7, y - 6);
   if (d.near || roomSealed()) drawText3(ctx, it.name.length > 22 ? it.name.slice(0, 21) + '…' : it.name, x, y - 18, col, { align: 'center' });
+}
+
+// A tiny arrow beside loot on the floor: green ▲ better than what's worn,
+// red ▼ worse, a yellow bar for about the same. Worked out again only when
+// the gear changes.
+function drawDropVerdict(ctx, d, x, y) {
+  const run = Game.run;
+  if (!run || !run.stats) return;
+  const key = SLOTS.map((s) => (run.gear[s] ? run.gear[s].id : '-')).join() + run.patches.length;
+  if (d._vKey !== key) { d._vKey = key; d._v = compareVerdict(run.gear, run.patches, d.item, run.floorN).kind; }
+  const k = d._v;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 3, y - 2, 7, 5);
+  if (k === 'up' || k === 'new') {
+    ctx.fillStyle = '#3cff6e';
+    ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x - 2, y + 1, 5, 1);
+  } else if (k === 'down') {
+    ctx.fillStyle = '#ff6a7a';
+    ctx.fillRect(x - 2, y - 1, 5, 1); ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x, y + 1, 1, 1);
+  } else {
+    ctx.fillStyle = '#e8e070';
+    ctx.fillRect(x - 2, y - 1, 5, 1); ctx.fillRect(x - 2, y + 1, 5, 1);
+  }
 }
 
 function drawCritter(ctx, c) {

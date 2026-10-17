@@ -79,11 +79,11 @@ function installBot() {
         const it = this.pendingItem || null;
         const btns = [...document.querySelectorAll('#compare-card .row .btn')];
         const verdict = document.querySelector('#compare-card .verdict');
-        const better = verdict && verdict.classList.contains('up');
+        const better = verdict && (verdict.classList.contains('up') || verdict.classList.contains('new'));
         (better ? btns[0] : btns[1]).click();
       } else if (m === 'screen-cache') {
         const opts = [...document.querySelectorAll('#cache-options .option')];
-        let pick = opts.find((o) => o.querySelector('.verdict.up')) || opts[0];
+        let pick = opts.find((o) => o.querySelector('.verdict.up, .verdict.new')) || opts[0];
         pick.click();
       } else if (m === 'screen-patch') {
         const o = document.querySelector('#patch-options .option');

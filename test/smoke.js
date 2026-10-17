@@ -206,9 +206,10 @@ async function phone(browser) {
   });
   check(await visible(page, 'screen-compare'), 'phone: walking onto loot did not open the compare card');
   await shot(page, 'smoke-compare');
-  const btn = await center(page, '#compare-card .row .btn.primary');
+  const btn = await center(page, '#cmp-equip');
   check(btn[3] >= 48, `phone: EQUIP is only ${btn[3]}px tall`);
-  await tap(page, '#compare-card .row .btn.primary');
+  check(await page.evaluate(() => { const v = document.querySelector('#compare-card .verdict'); return v.classList.contains('up') && /UPGRADE/.test(v.textContent) && document.getElementById('cmp-equip').classList.contains('primary'); }), 'phone: a clear upgrade did not say UPGRADE with EQUIP lit');
+  await tap(page, '#cmp-equip');
   check(await page.evaluate(() => Game.run.gear.coat.rarity === 2 && !Game.modal), 'phone: EQUIP did not equip');
   // death, the summary, and back to the desk
   await page.evaluate(() => { Game.debug.god = false; Game.player.invulnT = 0; Game.run.hp = 1; damagePlayer(999, 'the smoke test'); });

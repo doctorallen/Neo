@@ -62,7 +62,7 @@ const T = {
   secondWave: 0.4, secondWaveAt: 0.75,
 
   enemies: {
-    bug: { hp: 14, speed: 52, dmg: 8, cost: 1, from: 1, r: 4, ranged: false },
+    bug: { hp: 14, speed: 52, dmg: 8, cost: 1, from: 1, r: 4, ranged: false, recoil: 0.45, recoilSpeed: 1.3 }, // a bite, then it hops back
     watchdog: { hp: 30, speed: 40, dmg: 12, cost: 2, from: 1, r: 5, ranged: false, tellRange: 70, tell: 0.55, aimLock: 0.15, dashSpeed: 170, dashTime: 0.35, rest: 0.8 },
     firewall: { hp: 40, speed: 0, dmg: 9, cost: 2, from: 1, r: 6, ranged: true, every: 2.2, tell: 0.4, shots: 3, fan: 20, bullet: 70 },
     sentinel: { hp: 44, speed: 46, dmg: 12, cost: 3, from: 2, r: 6, ranged: false, orbit: 60, every: 3, tell: 0.5, aimLock: 0.1, lungeSpeed: 180, lungeTime: 0.3 },
@@ -84,6 +84,7 @@ const T = {
     chance: (n) => 0.12 + 0.06 * n, hp: 3.2, dmg: 1.3,
     mods: ['encrypted', 'overclocked', 'replicating', 'volatile'],
     shield: 0.4, fast: 1.45, copyHp: 0.3, blast: 20, blastR: 28, blastDelay: 0.6,
+    fastMove: 1.15, maxMove: 0.9, // overclocked walkers: a little faster, never past 90% of Neo's base speed
   },
 
   failsafe: { idle: 20 },

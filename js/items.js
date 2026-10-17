@@ -261,13 +261,20 @@ function estimateDps(s) {
 function compareVerdict(gear, patches, item, floorN) {
   const now = computeStats(gear, patches, floorN);
   const next = computeStats({ ...gear, [item.slot]: item }, patches, floorN);
+  const filled = !!gear[item.slot];
   if (item.slot === 'exploit') {
     const a = estimateDps(now), b = estimateDps(next), d = a > 0 ? (b - a) / a : 1;
-    return { text: `DPS ${Math.round(a)} → ${Math.round(b)}`, delta: d };
+    return { text: `DPS ${Math.round(a)} → ${Math.round(b)}`, delta: d, kind: verdictKind(d, filled), parts: [['DPS', a, b]] };
   }
   const ehp = (s) => s.maxHp / (1 - s.armor);
   const offence = (s) => estimateDps(s);
   const da = ehp(now), db = ehp(next), oa = offence(now), ob = offence(next);
   const d = ((db - da) / da) * 0.5 + ((ob - oa) / Math.max(1, oa)) * 0.5;
-  return { text: `TOUGHNESS ${Math.round(da)} → ${Math.round(db)} · DPS ${Math.round(oa)} → ${Math.round(ob)}`, delta: d };
+  return { text: `TOUGHNESS ${Math.round(da)} → ${Math.round(db)} · DPS ${Math.round(oa)} → ${Math.round(ob)}`, delta: d, kind: verdictKind(d, filled), parts: [['TOUGHNESS', da, db], ['DPS', oa, ob]] };
+}
+
+// Within 3% either way it's a sidegrade: pick on the affixes you like.
+function verdictKind(d, filled) {
+  if (!filled) return 'new';
+  return d >= 0.03 ? 'up' : d <= -0.03 ? 'down' : 'side';
 }

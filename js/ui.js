@@ -213,23 +213,46 @@ const UI = {
     return lines.join('');
   },
 
+  // The answer to "is it better?", readable at a glance: UPGRADE,
+  // DOWNGRADE, SIDEGRADE (within 3%) or NEW SLOT, the overall change, and
+  // the toughness / DPS numbers behind it.
+  verdictHtml(v, big = false) {
+    const label = { up: '▲ UPGRADE', down: '▼ DOWNGRADE', side: '= SIDEGRADE', new: '▲ NEW SLOT' }[v.kind];
+    const pct = v.kind === 'new' ? '' : `${v.delta >= 0 ? '+' : '−'}${Math.abs(Math.round(v.delta * 100))}%`;
+    const parts = v.parts.map(([k, a, b]) => {
+      const cls = Math.round(b) > Math.round(a) ? 'up' : Math.round(b) < Math.round(a) ? 'down' : '';
+      return `<span class="part">${k} ${Math.round(a)} → <span class="${cls}">${Math.round(b)}</span></span>`;
+    }).join('');
+    return `<div class="verdict ${v.kind}${big ? ' big' : ''}"><div class="vt"><span>${label}</span><span class="pct">${pct}</span></div><div class="parts">${parts}</div></div>`;
+  },
+
   // ---- the compare card ----
   openCompare(item, cb) {
     const run = Game.run, cur = run.gear[item.slot];
     const v = compareVerdict(run.gear, run.patches, item, run.floorN);
     const card = $('compare-card');
     card.style.color = T.rarity.colors[item.rarity];
-    const diffs = statDiffs(run.gear, run.patches, item, run.floorN);
+    // what changes, gains first
+    const diffs = statDiffs(run.gear, run.patches, item, run.floorN).sort((a, b) => b.up - a.up);
+    const col = T.rarity.colors[item.rarity];
+    const has = item.implicit.concat(item.affixes).map((a) => fmtAffix(a.id, a.v));
+    if (item.slot === 'exploit') has.unshift(exploitPatternText(item.base));
     card.innerHTML =
-      `<div class="verdict ${v.delta >= 0 ? 'up' : 'down'}">${v.delta >= 0 ? '▲' : '▼'} ${v.text}</div>` +
-      this.itemHtml(item) +
+      this.verdictHtml(v, true) +
+      `<div class="rar" style="color:${col}">${T.rarity.names[item.rarity].toUpperCase()} ${SLOT_NAMES[item.slot].toUpperCase()}${item.slot === 'exploit' ? ' · ' + escapeHtml(T.exploits[item.base].name) : ''}</div>` +
+      `<div class="name" style="color:${col}">${escapeHtml(item.name)}</div>` +
+      (item.unique ? `<div class="power">${escapeHtml(ZD[item.unique].power)}</div>` : '') +
       `<div class="diff">${diffs.map((d) => `<div class="line ${d.up ? 'up' : 'down'}">${d.up ? '▲' : '▼'} ${d.text}</div>`).join('') || '<div class="line" style="color:#4f8a5e">no change to your stats</div>'}</div>` +
-      (cur ? `<div class="equipped">equipped: <span style="color:${T.rarity.colors[cur.rarity]}">${escapeHtml(cur.name)}</span></div>` : '') +
+      `<div class="has">level ${item.ilvl} · ${has.map(escapeHtml).join(' · ')}</div>` +
+      (cur ? `<div class="equipped">replaces: <span style="color:${T.rarity.colors[cur.rarity]}">${escapeHtml(cur.name)}</span> <span class="dimr">(${T.rarity.names[cur.rarity].toLowerCase()})</span></div>` : '') +
       `<div class="row"></div>`;
     const row = card.querySelector('.row');
     const done = (c) => { this.hide(); cb(c); };
-    row.appendChild(this.button('EQUIP', () => done('equip'), 'btn primary'));
-    row.appendChild(this.button(`SCRAP <small>+${Math.round(T.rarity.scrap[item.rarity] * (1 + run.stats.data))} data</small>`, () => done('scrap')));
+    // the button that's lit is the one the numbers recommend
+    const scrapIt = v.kind === 'down';
+    row.appendChild(this.button('EQUIP', () => done('equip'), scrapIt ? 'btn' : 'btn primary'));
+    row.appendChild(this.button(`SCRAP <small>+${Math.round(T.rarity.scrap[item.rarity] * (1 + run.stats.data))} data</small>`, () => done('scrap'), scrapIt ? 'btn primary' : 'btn'));
+    row.children[0].id = 'cmp-equip'; row.children[1].id = 'cmp-scrap';
     this.show('screen-compare');
   },
 
@@ -244,7 +267,7 @@ const UI = {
         `<span class="name">${escapeHtml(it.name)}</span><span class="sub">${T.rarity.names[it.rarity]} ${SLOT_NAMES[it.slot]}${it.slot === 'exploit' ? ' · ' + T.exploits[it.base].name : ''} · level ${it.ilvl}</span>` +
         it.implicit.concat(it.affixes).map((a) => `<span class="line">${fmtAffix(a.id, a.v)}</span>`).join('') +
         (it.unique ? `<span class="line" style="color:var(--gold)">${escapeHtml(ZD[it.unique].power)}</span>` : '') +
-        `<span class="verdict ${cur ? (v.delta >= 0 ? 'up' : 'down') : 'up'}">${cur ? (v.delta >= 0 ? '▲ ' : '▼ ') + v.text : '▲ fills an empty slot'}</span>`,
+        this.verdictHtml(v),
         () => { this.hide(); cb(it); }, 'option');
       b.style.color = T.rarity.colors[it.rarity];
       box.appendChild(b);

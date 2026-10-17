@@ -49,7 +49,7 @@ function makeElite(e, rng, nMods) {
   rng.shuffle(pool);
   e.mods = pool.slice(0, nMods);
   if (e.mods.includes('encrypted')) { e.shieldMax = e.maxHp * T.elite.shield; e.shield = e.shieldMax; }
-  if (e.mods.includes('overclocked')) { e.speed *= T.elite.fast; e.rate = T.elite.fast; }
+  if (e.mods.includes('overclocked')) { e.speed = Math.min(e.speed * T.elite.fastMove, Math.max(e.speed, T.player.speed * T.elite.maxMove)); e.rate = T.elite.fast; }
   e.name = `${MOD_NAMES[e.mods[0]]} ${ELITE_NAMES[e.type] || ENEMY_NAMES[e.type]}`;
 }
 
@@ -204,9 +204,11 @@ function updateEnemies(dt) {
       if (f) { e.x = (f[0] + 0.5) * TILE; e.y = (f[1] + 0.5) * TILE; }
     }
     // contact
-    if (e.graceT <= 0 && e.type !== 'firewall' && e.type !== 'exile' && dist2(e.x, e.y, p.x, p.y) < (e.r + p.r + 1) ** 2) {
+    if (e.graceT <= 0 && !(e.recoilT > 0) && e.type !== 'firewall' && e.type !== 'exile' && dist2(e.x, e.y, p.x, p.y) < (e.r + p.r + 1) ** 2) {
       const dmg = e.state === 'charge' ? e.dmg * 1.3 : e.dmg;
       damagePlayer(dmg, e.name);
+      // bugs don't sit on him: each touch, hurt or not, sends them hopping back
+      if (e.type === 'bug') { e.recoilT = T.enemies.bug.recoil; e.recoilA = e.x === p.x && e.y === p.y ? Math.random() * Math.PI * 2 : angleTo(p.x, p.y, e.x, e.y); }
     }
   }
   // processes don't stack on top of each other
@@ -230,6 +232,13 @@ function walkToward(e, dt, speed) {
 }
 
 function aiBug(e, p, dt) {
+  // just bit: hop back before coming in again
+  if (e.recoilT > 0) {
+    e.recoilT -= dt;
+    const v = e.speed * T.enemies.bug.recoilSpeed;
+    moveEntity(e, Math.cos(e.recoilA) * v * dt, Math.sin(e.recoilA) * v * dt);
+    return;
+  }
   const [dx, dy] = flowDir(e);
   const wob = Math.sin(e.anim * 9 + e.pid) * 0.6;
   moveEntity(e, (dx - dy * wob) * e.speed * dt, (dy + dx * wob) * e.speed * dt);

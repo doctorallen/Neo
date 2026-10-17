@@ -169,8 +169,21 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .card .line { font-size: 20px; color: var(--ink); line-height: 1.15; }
 .card .implicit { color: #9ac8a6; }
 .card .power { color: var(--gold); font-size: 20px; margin: 6px 0; line-height: 1.15; }
-.card .verdict { font-size: 22px; padding: 4px 6px; margin-bottom: 8px; background: #06180c; }
-.card .diff { margin: 6px 0 4px; }
+/* the verdict: UPGRADE / DOWNGRADE / SIDEGRADE / NEW SLOT */
+.verdict { --vc: var(--green); display: block; margin: 6px 0 2px; padding: 4px 8px; border: 2px solid var(--vc); background: #06180c; background: color-mix(in srgb, var(--vc) 12%, #020c06); color: var(--ink); text-align: left; }
+.verdict.down { --vc: #ff6a7a; }
+.verdict.side { --vc: #e8e070; }
+.verdict .vt { display: flex; justify-content: space-between; align-items: baseline; color: var(--vc); font-size: 22px; letter-spacing: 1px; }
+.verdict .pct { font-size: 22px; }
+.verdict .parts { display: flex; flex-wrap: wrap; gap: 0 14px; font-size: 17px; color: var(--dim); }
+.verdict.big { margin: 0 0 10px; padding: 6px 10px; }
+.verdict.big .vt, .verdict.big .pct { font-size: 32px; line-height: 1.05; }
+.verdict.big .parts { font-size: 19px; }
+.card .diff { margin: 8px 0 4px; }
+.card .diff .line.up { color: var(--green); }
+.card .diff .line.down { color: #ff6a7a; }
+.card .has { font-size: 17px; color: var(--dim); line-height: 1.15; margin-top: 6px; }
+.card .dimr { color: var(--dim); }
 .up { color: var(--green); }
 .down { color: #ff6a7a; }
 .card .equipped { margin-top: 8px; padding-top: 6px; border-top: 1px dashed #1d4a2a; font-size: 18px; color: var(--dim); }
@@ -181,7 +194,7 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .option .name { font-size: 26px; display: block; line-height: 1.05; }
 .option .sub { color: var(--dim); font-size: 18px; display: block; }
 .option .line { display: block; color: var(--ink); line-height: 1.15; }
-.option .verdict { display: block; margin-top: 4px; font-size: 19px; }
+.option .verdict { margin-top: 6px; }
 .option.patch { color: var(--green); }
 .option.patch.rare { color: var(--r3); }
 .oracle .name { color: var(--green); }
