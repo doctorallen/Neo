@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#010302">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NEO">
+<meta name="description" content="Wake up. A five-minute hacking roguelite.">
+<title>NEO</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/font.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div id="hud-hp" class="hp"><div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div><span id="hp-text" class="hp-text">100</span></div>
+    <div id="hud-mid" class="hud-mid"><span id="sector">SECTOR 1/5</span><span id="timer">0:00</span></div>
+    <div id="hud-data" class="hud-data"><span class="data-glyph">◆</span><span id="data">0</span></div>
+    <button id="btn-pause" class="icon-btn" aria-label="Pause">II</button>
+  </header>
+
+  <main id="stage">
+    <canvas id="view"></canvas>
+    <div id="hint" class="hint" hidden></div>
+    <div id="banner" class="banner" hidden></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+  </main>
+
+  <footer id="deck">
+    <canvas id="minimap" width="72" height="72"></canvas>
+    <div id="feed" class="feed" aria-live="polite"></div>
+    <div id="stick-base" class="stick-base" hidden><div id="stick-knob" class="stick-knob"></div></div>
+    <div id="stick-ghost" class="stick-ghost" hidden></div>
+    <div class="deck-buttons">
+      <button id="btn-focus" class="deck-btn focus" aria-label="Bullet Time"><svg viewBox="0 0 100 100" class="ring"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle id="focus-ring" cx="50" cy="50" r="45" class="ring-fg"/></svg><span>FOCUS</span></button>
+      <button id="btn-phase" class="deck-btn phase" aria-label="Phase"><svg viewBox="0 0 100 100" class="ring"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle id="phase-ring" cx="50" cy="50" r="45" class="ring-fg"/></svg><span>PHASE</span></button>
+      <button id="btn-act" class="deck-btn act" hidden>JACK IN</button>
+    </div>
+  </footer>
+
+  <!-- the screens; only one shows at a time -->
+  <section id="screen-title" class="screen title" hidden>
+    <canvas id="rain"></canvas>
+    <div class="title-inner">
+      <h1 class="logo" aria-label="NEO">NEO</h1>
+      <div class="menu" id="title-menu"></div>
+      <div class="build" id="build"></div>
+    </div>
+  </section>
+
+  <section id="screen-crt" class="screen crt" hidden>
+    <div class="crt-text"><span id="crt-line"></span><span class="cursor">█</span></div>
+    <button id="crt-skip" class="skip" hidden>skip ▸</button>
+  </section>
+
+  <section id="screen-pause" class="screen panel" hidden>
+    <h2>// PAUSED</h2>
+    <div class="menu" id="pause-menu"></div>
+  </section>
+
+  <section id="screen-loadout" class="screen panel scroll" hidden>
+    <h2>// LOADOUT</h2>
+    <div id="loadout-items" class="loadout-items"></div>
+    <h3>PATCHES</h3>
+    <div id="loadout-patches" class="chips"></div>
+    <h3>STATS</h3>
+    <div id="loadout-stats" class="stats-table"></div>
+    <div class="menu"><button class="btn" data-back>BACK</button></div>
+  </section>
+
+  <section id="screen-settings" class="screen panel scroll" hidden>
+    <h2>// SETTINGS</h2>
+    <div id="settings-list" class="settings"></div>
+    <div class="menu"><button class="btn" data-back>BACK</button></div>
+  </section>
+
+  <section id="screen-upgrades" class="screen panel scroll" hidden>
+    <h2>// KERNEL</h2>
+    <div class="balance">DATA <span id="up-data">0</span></div>
+    <div id="up-list" class="up-list"></div>
+    <div id="up-depth" class="up-depth"></div>
+    <div id="up-zd" class="up-list"></div>
+    <div class="menu"><button class="btn" data-back>LOG OUT</button></div>
+  </section>
+
+  <section id="screen-records" class="screen panel scroll" hidden>
+    <h2>// RECORDS</h2>
+    <div id="records-stats" class="stats-table"></div>
+    <h3>ZERO-DAYS</h3>
+    <div id="records-codex" class="codex"></div>
+    <div class="menu"><button class="btn" data-back>BACK</button></div>
+  </section>
+
+  <section id="screen-compare" class="screen card-screen" hidden>
+    <div class="card" id="compare-card"></div>
+  </section>
+
+  <section id="screen-cache" class="screen card-screen scroll" hidden>
+    <h2 class="card-title">// CACHE DECRYPTED</h2>
+    <p class="card-sub">Take one. The rest is scrapped for Data.</p>
+    <div id="cache-options" class="cache-options"></div>
+  </section>
+
+  <section id="screen-patch" class="screen card-screen scroll" hidden>
+    <h2 class="card-title">// INSTALL PATCH</h2>
+    <p class="card-sub" id="patch-sub"></p>
+    <div id="patch-options" class="patch-options"></div>
+    <div class="menu" id="patch-extra"></div>
+  </section>
+
+  <section id="screen-oracle" class="screen card-screen" hidden>
+    <div class="card oracle" id="oracle-card"></div>
+  </section>
+
+  <section id="screen-summary" class="screen panel scroll" hidden>
+    <h2 id="sum-title">CONNECTION LOST</h2>
+    <div id="sum-lines" class="sum-lines"></div>
+    <div id="sum-unlocks" class="sum-unlocks"></div>
+    <div class="menu"><button id="sum-wake" class="btn primary" hidden>&gt; wake up</button></div>
+  </section>
+
+  <section id="screen-confirm" class="screen panel" hidden>
+    <h2 id="confirm-title">ARE YOU SURE?</h2>
+    <p id="confirm-text" class="confirm-text"></p>
+    <div class="menu"><button id="confirm-yes" class="btn danger">YES</button><button id="confirm-no" class="btn">NO</button></div>
+  </section>
+
+  <div id="rotate" class="rotate"><div>ROTATE YOUR PHONE<br><span>this program runs upright</span></div></div>
+  <div id="scanlines" class="scanlines"></div>
+</div>
+
+<script src="js/util.js"></script>
+<script src="js/version.js"></script>
+<script src="js/tuning.js"></script>
+<script src="js/save.js"></script>
+<script src="js/font.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/rooms.js"></script>
+<script src="js/dungeon.js"></script>
+<script src="js/items.js"></script>
+<script src="js/patches.js"></script>
+<script src="js/game.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/player.js"></script>
+<script src="js/shots.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/boss.js"></script>
+<script src="js/interact.js"></script>
+<script src="js/hub.js"></script>
+<script src="js/render.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

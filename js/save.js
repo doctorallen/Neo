@@ -19,12 +19,13 @@ function defaultSave() {
     version: 1,
     settings: {
       music: 0.5, sfx: 0.8, haptics: true, shake: !calm, scanlines: true, reducedFlash: calm,
-      damageNumbers: true, fireWhileMoving: false, leftHanded: false, autoScrap: 1, // 0 off, 1 Common, 2 Uncommon
-      skipIntro: false,
+      damageNumbers: true, fireWhileMoving: false, leftHanded: false, flickPhase: true,
+      autoScrap: 1, // scrap drops below this rarity on sight: 0 off, 1 Commons, 2 Commons and Uncommons
+      fullIntro: false, // play the whole cold open every time, not only the first
     },
     meta: {
       data: 0, upgrades: {}, unlocks: {}, zeroDays: {}, depth: 1, maxDepth: 1, introSeen: false, tutorialDone: false,
-      reached2: false,
+      reached2: false, hints: {}, lastWin: false,
     },
     records: {
       runs: 0, wins: 0, kills: 0, bestTime: 0, deepest: 0, legendaries: 0, bestDepthWin: 0,

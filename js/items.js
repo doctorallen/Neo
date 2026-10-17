@@ -195,6 +195,10 @@ function computeStats(gear, patches, floorN = 1) {
     if (it.unique) s.powers[it.unique] = true;
   }
   for (const p of patches) applyPatch(s, p);
+  // the Oracle's pills
+  const pill = Game.run && Game.run.pill;
+  if (pill === 'red') { s.dmg += 0.15; s.maxHp -= 15; }
+  if (pill === 'blue') s.maxHp += 20;
   // permanent upgrades and the depth
   s.maxHp += 10 * Save.rank('hp');
   s.dmg += 0.06 * Save.rank('dmg');
