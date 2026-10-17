@@ -189,6 +189,8 @@ function drawRoom(ctx, room) {
   for (const c of Game.critters) list.push({ y: c.y, f: () => drawCritter(ctx, c) });
   const p = Game.player;
   if (p && !p.hidden) list.push({ y: p.y, f: () => drawPlayer(ctx, p) });
+  const dc = Game.decoy;
+  if (dc) list.push({ y: dc.y, f: () => blit(ctx, SPR.neo.coat.phase, dc.x, dc.y, { flip: dc.facing < 0, alpha: 0.35 + 0.25 * Math.min(1, dc.t) }) });
   list.sort((a, b) => a.y - b.y);
   for (const it of list) it.f();
   if (p && !p.hidden && Game.scene === 'run') drawAim(ctx, p);
@@ -262,6 +264,17 @@ function drawPlayer(ctx, p) {
   if (p.firing && p.fireHeldT >= T.player.compileAfter && !Game.bt) {
     ctx.fillStyle = Math.random() < 0.5 ? '#3cff6e' : '#b8ffc8';
     ctx.fillRect(Math.round(p.x + p.facing * (5 + Math.random() * 3)), Math.round(p.y - 8 - Math.random() * 6), 1, 1);
+  }
+  // Zero Trust's shield
+  if (p.shield) {
+    ctx.fillStyle = PROTOCOLS.crypto.color;
+    for (let i = 0; i < 16; i++) {
+      if ((i + Math.floor(Game.realT * 8)) % 4 === 0) continue;
+      const a = (i / 16) * Math.PI * 2;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(Math.round(p.x + Math.cos(a) * 9), Math.round(p.y - 8 + Math.sin(a) * 11), 1, 1);
+    }
+    ctx.globalAlpha = 1;
   }
   if (p.daemon) { ctx.fillStyle = '#8cffb0'; ctx.fillRect(Math.round(p.daemon.x) - 1, Math.round(p.daemon.y) - 1, 3, 3); ctx.fillStyle = '#0a2a14'; ctx.fillRect(Math.round(p.daemon.x), Math.round(p.daemon.y), 1, 1); }
   // integrity over his head once he's been hurt
@@ -375,6 +388,9 @@ function drawProp(ctx, pr) {
       if (Math.floor(Game.realT * 3) % 2 === 0) drawText3(ctx, 'RING', x, y - 26, '#ffe14a', { align: 'center' });
       if (pr.hold) { ctx.fillStyle = '#3cff6e'; ctx.fillRect(Math.round(x - 6), Math.round(y + 3), Math.round(12 * Math.min(1, pr.hold / 0.5)), 1); }
     }
+  } else if (pr.kind === 'backdoor') {
+    blit(ctx, P.backdoor, x, y, { alpha: pr.spent ? 0.5 : 1 });
+    if (!pr.spent && Math.floor(Game.realT * 2) % 2) drawText3(ctx, 'OPEN PORT', x, y - 24, '#ff9a3c', { align: 'center' });
   } else if (pr.kind === 'oracle') {
     blit(ctx, P.oracle, x, y, { alpha: pr.spent ? 0.6 : 1 });
     if (!pr.spent && Math.floor(Game.realT * 2) % 2) drawText3(ctx, '>_', x, y - 22, '#3cff6e', { align: 'center' });

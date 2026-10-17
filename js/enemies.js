@@ -77,6 +77,12 @@ function planWaves(room) {
   const plan = { waves: [], elite: false, eliteMods: n >= 4 ? 2 : 1 };
   if (room.kind === 'boss') { plan.waves = [['boss']]; return plan; }
   if (room.tutorial) { plan.waves = [['bug', 'bug', 'bug'], ['firewall']]; return plan; }
+  if (room.kind === 'backdoor') {
+    // the honeypot: one wave, two of them elite
+    plan.waves = [fill(Math.max(3, Math.round(T.budget(n) * T.backdoor.budget)), cap)];
+    plan.elite = true; plan.elites = T.backdoor.elites;
+    return plan;
+  }
   if (room.kind === 'exit' && n >= 3) {
     plan.waves = [['agent', ...fill(n === 3 ? 3 : 6, n === 3 ? 2 : 3).filter((t) => !T.enemies[t].ranged || t === 'firewall').slice(0, n === 3 ? 2 : 3)]];
     if (n >= 4) plan.waves.push(fill(Math.round(B * T.secondWave), cap));
@@ -84,7 +90,7 @@ function planWaves(room) {
   }
   plan.waves.push(fill(B, cap));
   if (room.size === 'large' || room.kind === 'exit') plan.waves.push(fill(Math.round(B * T.secondWave), cap));
-  plan.elite = room.kind === 'exit' || rng.chance(T.elite.chance(n));
+  plan.elite = room.kind === 'exit' || rng.chance(Math.min(1, T.elite.chance(n) * (counterOn('hardened') ? 2 : 1)));
   plan.waves = plan.waves.filter((w) => w.length);
   return plan;
 }
@@ -134,13 +140,13 @@ function spawnWave(room, i) {
   const f = room.fight, run = Game.run;
   f.wave = i; f.waveCount = f.plan.waves[i].length; f.killedInWave = 0;
   const taken = [];
-  let eliteDone = !f.plan.elite || i > 0;
+  let elitesLeft = f.plan.elite && i === 0 ? f.plan.elites || 1 : 0;
   for (const type of f.plan.waves[i]) {
     if (type === 'boss') { spawnBoss(room); continue; }
     const pt = spawnPoint(room, run.rng, taken) || room.centre();
     taken.push(pt);
     const e = makeEnemy(type, pt.x, pt.y, { wave: i });
-    if (!eliteDone && type !== 'agent') { makeElite(e, run.rng, f.plan.eliteMods); eliteDone = true; }
+    if (elitesLeft > 0 && type !== 'agent') { makeElite(e, run.rng, f.plan.eliteMods); elitesLeft--; }
     Game.enemies.push(e);
   }
   Sound.play('spawn');
@@ -167,6 +173,9 @@ function spawnPoint(room, rng, taken) {
 // ---------------------------------------------------------------------------
 function updateEnemies(dt) {
   const p = Game.player, room = Game.room, run = Game.run;
+  // the GHOST protocol's decoy draws their aim while it lasts (contact still finds Neo)
+  if (Game.decoy) { Game.decoy.t -= dt; if (Game.decoy.t <= 0) Game.decoy = null; }
+  const aimAt = Game.decoy || p;
   const slowAll = run.stats.powers.packetloss ? 0.85 : 1;
   for (const e of Game.enemies) {
     if (e.dead) { e.deadT += dt; continue; }
@@ -189,14 +198,14 @@ function updateEnemies(dt) {
     const canAttack = e.graceT <= 0 && onScreen(e.x, e.y - e.h / 2, -2) && !Game.flow;
     const mdt = dt * slow;
     switch (e.type) {
-      case 'bug': aiBug(e, p, mdt); break;
-      case 'watchdog': aiWatchdog(e, p, mdt, edt, canAttack); break;
-      case 'firewall': aiFirewall(e, p, edt, canAttack); break;
-      case 'sentinel': aiSentinel(e, p, mdt, edt, canAttack); break;
-      case 'worm': aiWorm(e, p, mdt); break;
-      case 'exile': aiExile(e, p, edt, canAttack); break;
-      case 'agent': case 'clone': aiAgent(e, p, mdt, edt, canAttack); break;
-      case 'boss': aiBoss(e, p, mdt, edt, canAttack); break;
+      case 'bug': aiBug(e, aimAt, mdt); break;
+      case 'watchdog': aiWatchdog(e, aimAt, mdt, edt, canAttack); break;
+      case 'firewall': aiFirewall(e, aimAt, edt, canAttack); break;
+      case 'sentinel': aiSentinel(e, aimAt, mdt, edt, canAttack); break;
+      case 'worm': aiWorm(e, aimAt, mdt); break;
+      case 'exile': aiExile(e, aimAt, edt, canAttack); break;
+      case 'agent': case 'clone': aiAgent(e, aimAt, mdt, edt, canAttack); break;
+      case 'boss': aiBoss(e, aimAt, mdt, edt, canAttack); break;
     }
     // stuck inside something solid (a teleport gone wrong): out to the nearest floor
     if (circleBlocked(room, e.x, e.y, e.r * 0.6, e)) {
@@ -392,6 +401,8 @@ function damageEnemy(e, dmg, opts = {}) {
   e.hp -= d;
   e.flashT = 0.07;
   addDamageNumber(e, d, crit);
+  // the KERNEL protocol's Root Shell: a crit bursts round the target
+  if (crit && opts.source === 'shot' && s.powers.rootshell) blast(e.x, e.y - e.h / 2, 16, d * 0.5, PROTOCOLS.kernel.color);
   Sound.play(crit ? 'crit' : 'hit', { vol: 0.35 });
   if (s.leech > 0) { run.leechAcc = (run.leechAcc || 0) + d * s.leech; if (run.leechAcc >= 1) { const h = Math.floor(run.leechAcc); run.leechAcc -= h; healPlayer(h, false); } }
   if (opts.source === 'shot' || opts.source === 'blast') {
@@ -414,6 +425,16 @@ function killEnemy(e) {
   UI.feed(`> kill ${e.pid} ${e.elite ? ENEMY_NAMES[e.type] : e.name}`);
   if (e.elite) { run.eliteKills++; addFloat(e.x, e.y - e.h - 6, 'TERMINATED', '#ffb43a', true); if (s.powers.earpiece) refreshStats(); }
   if (s.powers.gc) healPlayer(2, false);
+  // the NETWORK protocol's Botnet: the dead process passes a packet on
+  if (s.powers.botnet) {
+    let t = null, bd = 100 * 100;
+    for (const o of Game.enemies) {
+      if (o === e || o.dead || o.spawnT > 0 || o.untargetable) continue;
+      const d2 = dist2(o.x, o.y, e.x, e.y);
+      if (d2 < bd) { bd = d2; t = o; }
+    }
+    if (t) spawnShot({ x: e.x, y: e.y - e.h / 2, a: angleTo(e.x, e.y - e.h / 2, t.x, t.y - t.h / 2), speed: 200, dmg: s.weapon.dmg * 0.6, homing: 4, target: t, color: PROTOCOLS.network.color, small: true, hop: true });
+  }
   // what it leaves behind
   const rng = run.rng, n = run.floorN, luck = s.luck;
   if (e.type === 'agent') {
@@ -469,11 +490,13 @@ function dropSpot(x, y) {
 
 function dropItem(x0, y0, item) {
   const [x, y, tx, ty] = dropSpot(x0, y0);
+  if (item.rarity >= 2 && Game.run) Game.run.rareSeen = true;
   Game.drops.push({ kind: 'item', item, x, y, tx, ty, t: 0, id: item.id });
   Sound.play('pickup_' + Math.min(4, item.rarity), { vol: 0.5 });
 }
 
 function dropOrb(x0, y0) {
+  if (counterOn('strictgc')) return;
   const [x, y, tx, ty] = dropSpot(x0, y0);
   Game.drops.push({ kind: 'orb', x, y, tx, ty, t: 0 });
 }

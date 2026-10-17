@@ -188,6 +188,7 @@ const UI = {
     const counts = {};
     for (const p of run.patches) counts[p] = (counts[p] || 0) + 1;
     for (const id of Object.keys(counts)) { const c = document.createElement('span'); c.className = 'chip'; c.textContent = PATCH[id].name + (counts[id] > 1 ? ` ×${counts[id]}` : ''); chips.appendChild(c); }
+    $('loadout-protocols').innerHTML = this.protocolsHtml(run.stats.protocols);
     const s = run.stats;
     const rows = [
       ['Integrity', `${Math.ceil(run.hp)} / ${s.maxHp}`], ['Exploit', T.exploits[s.weapon.base].name], ['Damage per shot', Math.round(s.weapon.dmg)],
@@ -196,6 +197,9 @@ const UI = {
       ['Leech', pct(s.leech)], ['Corrupt', pct(s.corrupt)], ['Slow chance', pct(s.throttle)], ['Phase cooldown', s.phaseCd.toFixed(2) + 's'],
       ['Focus gain', '+' + pct(s.focus)], ['Thorns', s.thorns], ['Data gain', '+' + pct(s.data)], ['Item rarity', '+' + pct(s.luck)],
     ];
+    if (s.dmgTaken) rows.push(['Damage taken', '+' + pct(s.dmgTaken)]);
+    if (s.packetSpeed) rows.push(['Enemy packet speed', '+' + pct(s.packetSpeed)]);
+    if (run.hpCut) rows.push(['Backdoor cut', '−' + pct(run.hpCut) + ' integrity']);
     $('loadout-stats').innerHTML = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('');
     this.show('screen-loadout', { keep: true });
   },
@@ -209,8 +213,13 @@ const UI = {
     if (it.slot === 'exploit') { const E = T.exploits[it.base]; lines.push(`<div class="line implicit">base ${Math.round(exploitDamage(it.base, it.ilvl))} damage × ${E.rate.toFixed(1)}/s · ${exploitPatternText(it.base)}</div>`); }
     for (const a of it.implicit) lines.push(`<div class="line implicit">${fmtAffix(a.id, a.v)}</div>`);
     for (const a of it.affixes) lines.push(`<div class="line">${fmtAffix(a.id, a.v)}</div>`);
+    if (it.unstable) lines.push(this.unstableHtml(it));
     if (it.unique) lines.push(`<div class="power">${escapeHtml(ZD[it.unique].power)}</div>`);
     return lines.join('');
+  },
+  unstableHtml(it) {
+    const u = it.unstable;
+    return `<div class="unstable"><span class="tag">UNSTABLE</span> <span class="up">${fmtAffix(u.up.id, u.up.v)}</span> · <span class="down">${fmtAffix(u.down.id, u.down.v)}</span></div>`;
   },
 
   // The answer to "is it better?", readable at a glance: UPGRADE,
@@ -241,8 +250,9 @@ const UI = {
       this.verdictHtml(v, true) +
       `<div class="rar" style="color:${col}">${T.rarity.names[item.rarity].toUpperCase()} ${SLOT_NAMES[item.slot].toUpperCase()}${item.slot === 'exploit' ? ' · ' + escapeHtml(T.exploits[item.base].name) : ''}</div>` +
       `<div class="name" style="color:${col}">${escapeHtml(item.name)}</div>` +
-      (item.unique ? `<div class="power">${escapeHtml(ZD[item.unique].power)}</div>` : '') +
+      (item.unique ? `<div class="power">${escapeHtml(ZD[item.unique].power)}</div>` + this.protoChip(ZD[item.unique].proto, null, false).replace('class="proto"', 'class="proto card-proto"').replace(/ \d\/3/, '') : '') +
       `<div class="diff">${diffs.map((d) => `<div class="line ${d.up ? 'up' : 'down'}">${d.up ? '▲' : '▼'} ${d.text}</div>`).join('') || '<div class="line" style="color:#4f8a5e">no change to your stats</div>'}</div>` +
+      (item.unstable ? this.unstableHtml(item) : '') +
       `<div class="has">level ${item.ilvl} · ${has.map(escapeHtml).join(' · ')}</div>` +
       (cur ? `<div class="equipped">replaces: <span style="color:${T.rarity.colors[cur.rarity]}">${escapeHtml(cur.name)}</span> <span class="dimr">(${T.rarity.names[cur.rarity].toLowerCase()})</span></div>` : '') +
       `<div class="row"></div>`;
@@ -266,6 +276,7 @@ const UI = {
       const b = this.button(
         `<span class="name">${escapeHtml(it.name)}</span><span class="sub">${T.rarity.names[it.rarity]} ${SLOT_NAMES[it.slot]}${it.slot === 'exploit' ? ' · ' + T.exploits[it.base].name : ''} · level ${it.ilvl}</span>` +
         it.implicit.concat(it.affixes).map((a) => `<span class="line">${fmtAffix(a.id, a.v)}</span>`).join('') +
+        (it.unstable ? this.unstableHtml(it).replace(/<div/g, '<span').replace(/<\/div>/g, '</span>') : '') +
         (it.unique ? `<span class="line" style="color:var(--gold)">${escapeHtml(ZD[it.unique].power)}</span>` : '') +
         this.verdictHtml(v),
         () => { this.hide(); cb(it); }, 'option');
@@ -291,7 +302,7 @@ const UI = {
       for (const id of offer) {
         const p = PATCH[id];
         const have = run.patches.filter((x) => x === id).length;
-        box.appendChild(this.button(`<span class="name">${p.name}${have ? ` <small>(have ${have})</small>` : ''}</span><span class="line">${p.desc}</span>${p.rare ? '<span class="sub">rare</span>' : ''}`, () => { this.hide(); cb(id); }, 'option patch' + (p.rare ? ' rare' : '')));
+        box.appendChild(this.button(`<span class="name">${p.name}${have ? ` <small>(have ${have})</small>` : ''}</span><span class="line">${p.desc}</span>${this.protoChip(p.proto, run.stats.protocols, !have)}${p.rare ? '<span class="sub">rare</span>' : ''}`, () => { this.hide(); cb(id); }, 'option patch' + (p.rare ? ' rare' : '')));
       }
       const extra = $('patch-extra');
       extra.innerHTML = '';
@@ -302,11 +313,29 @@ const UI = {
     this.show('screen-patch');
   },
 
+  // A protocol tag for a patch or Zero-Day: its name, how many the build has,
+  // and what taking this one would unlock.
+  protoChip(proto, counts, adds) {
+    const P = PROTOCOLS[proto];
+    if (!P) return '';
+    const n = (counts && counts[proto]) || 0, next = adds ? n + 1 : n;
+    const gain = adds && next === 2 ? ` → ${P.two}` : adds && next === 3 ? ` → <b>${P.power}</b>` : '';
+    return `<span class="proto" style="color:${P.color}">◆ ${P.name} ${Math.min(next, 3)}/3${gain}</span>`;
+  },
+  protocolsHtml(counts) {
+    return PROTO_IDS.map((id) => {
+      const P = PROTOCOLS[id], n = (counts && counts[id]) || 0;
+      const pips = '■'.repeat(Math.min(3, n)) + '□'.repeat(Math.max(0, 3 - n));
+      return `<div class="proto-row${n >= 3 ? ' full' : ''}" style="--pc:${P.color}"><div class="pn"><span>${P.name}</span><span class="pips">${pips}</span></div>` +
+        `<div class="pd${n >= 2 ? ' on' : ''}">2: ${P.two}</div><div class="pd${n >= 3 ? ' on' : ''}">3: <b>${P.power}</b>: ${P.three}</div></div>`;
+    }).join('');
+  },
+
   // ---- the Oracle ----
   openOracle(ev) {
     const card = $('oracle-card');
-    card.style.color = '#3cff6e';
-    card.innerHTML = `<div class="rar">THE ORACLE</div><div class="name">${escapeHtml(ev.title)}</div><div class="text">${escapeHtml(ev.text)}</div><div class="choices"></div>`;
+    card.style.color = ev.color || '#3cff6e';
+    card.innerHTML = `<div class="rar">${escapeHtml(ev.header || 'THE ORACLE')}</div><div class="name">${escapeHtml(ev.title)}</div><div class="text">${escapeHtml(ev.text)}</div><div class="choices"></div>`;
     const box = card.querySelector('.choices');
     for (const c of ev.choices) {
       if (c.when && !c.when()) continue;
@@ -317,6 +346,20 @@ const UI = {
   },
 
   // ---- the summary ----
+  // After a death: what did most of the damage, a tip about it, and the
+  // last hits, so the loss can be read and learned from.
+  traceHtml(run) {
+    const by = Object.entries(run.dmgBy || {}).sort((a, b) => b[1] - a[1]);
+    const total = by.reduce((a, e) => a + e[1], 0);
+    if (!total) return '';
+    const [top, n] = by[0];
+    const hits = (run.hits || []).slice().reverse().map((h) => `${escapeHtml(h.src)} <span class="down">−${h.dmg}</span>`).join(' · ');
+    return `<div class="th">TRACE</div>` +
+      `<div class="top">${escapeHtml(top)} · ${Math.round((n / total) * 100)}% of the damage you took</div>` +
+      `<div class="tip">&gt; ${escapeHtml(traceTip(top))}</div>` +
+      (hits ? `<div class="hits">last hits: ${hits}</div>` : '');
+  },
+
   openSummary(run) {
     const won = run.victory;
     const h = $('sum-title');
@@ -332,6 +375,7 @@ const UI = {
     ];
     if (!won) rows.push(['terminated by', escapeHtml(run.killedBy || 'unknown')]);
     if (run.depth > 1) rows.push(['depth', run.depth]);
+    if (run.counter && run.counter.length) rows.push(['countermeasures', `${run.counter.length} · +${Math.round(run.counter.reduce((a, id) => a + T.counter.find((c) => c.id === id).data, 0) * 100)}% data`]);
     if (run.daily) rows.push(['daily trace', todayKey()]);
     const lines = $('sum-lines');
     lines.innerHTML = '';
@@ -339,6 +383,14 @@ const UI = {
     if (run.unlockedZeroDay) unl.unshift(`Zero-Day decompiled: ${ZD[run.unlockedZeroDay].name}`);
     $('sum-unlocks').innerHTML = unl.map((u) => '◆ ' + escapeHtml(u)).join('<br>');
     $('sum-unlocks').hidden = true;
+    const trace = $('sum-trace');
+    trace.innerHTML = won ? '' : this.traceHtml(run);
+    trace.hidden = true;
+    const share = $('sum-share');
+    share.hidden = true;
+    share.textContent = 'SHARE RESULT';
+    share.onclick = () => { if (this.guarded(share)) return; Sound.play('ui_tap'); shareResult(run, share); };
+    const reveal = () => { wake.hidden = false; $('sum-unlocks').hidden = false; trace.hidden = !trace.innerHTML; share.hidden = !run.daily; };
     // the lines arrive one by one; a tap shows them all
     let i = 0;
     const wake = $('sum-wake');
@@ -346,9 +398,9 @@ const UI = {
     const step = () => {
       if (this.screen !== 'screen-summary') return;
       if (i < rows.length) { lines.insertAdjacentHTML('beforeend', `<span class="k">${rows[i][0]}</span><span class="v">${rows[i][1]}</span>`); i++; Sound.play('key'); this.sumTimer = setTimeout(step, 180); }
-      else { wake.hidden = false; $('sum-unlocks').hidden = false; }
+      else reveal();
     };
-    $('screen-summary').onpointerdown = () => { if (i < rows.length) { clearTimeout(this.sumTimer); while (i < rows.length) { lines.insertAdjacentHTML('beforeend', `<span class="k">${rows[i][0]}</span><span class="v">${rows[i][1]}</span>`); i++; } wake.hidden = false; $('sum-unlocks').hidden = false; this.guardButtons('screen-summary'); } };
+    $('screen-summary').onpointerdown = () => { if (i < rows.length) { clearTimeout(this.sumTimer); while (i < rows.length) { lines.insertAdjacentHTML('beforeend', `<span class="k">${rows[i][0]}</span><span class="v">${rows[i][1]}</span>`); i++; } reveal(); this.guardButtons('screen-summary'); } };
     wake.onclick = () => { if (this.guarded(wake)) return; Sound.play('ui_tap'); this.hide(); enterHub({ won }); };
     this.show('screen-summary');
     setTimeout(step, 450);
@@ -396,6 +448,25 @@ const UI = {
         dep.appendChild(b);
       }
     }
+    // countermeasures: unlocked with Depth, by a first win
+    const cm = $('up-counter');
+    cm.innerHTML = '';
+    if (Save.meta.maxDepth > 1) {
+      cm.insertAdjacentHTML('beforeend', '<h3>COUNTERMEASURES</h3><div class="ds" style="color:var(--dim);font-size:18px;margin-bottom:6px">Harder runs, each its own way. Each adds Data. Never in the Daily Trace.</div>');
+      for (const c of T.counter) {
+        const on = !!Save.meta.counter[c.id];
+        const d = document.createElement('div');
+        d.className = 'up-item';
+        d.innerHTML = `<div class="info"><div class="nm">${c.name}</div><div class="ds">${c.desc} · +${Math.round(c.data * 100)}% Data</div></div>`;
+        const b = document.createElement('button');
+        b.className = 'buy toggle' + (on ? ' on' : '');
+        b.textContent = on ? 'ON' : 'OFF';
+        b.dataset.counter = c.id;
+        b.addEventListener('click', () => { if (this.guarded(b)) return; Save.meta.counter[c.id] = !on; Save.write(); Sound.play('ui_tap'); this.buildUpgrades(); });
+        d.appendChild(b);
+        cm.appendChild(d);
+      }
+    }
     // Zero-Days still to decompile
     const zl = $('up-zd');
     zl.innerHTML = '';
@@ -432,6 +503,8 @@ const UI = {
       ['daily trace today', r.daily.key === todayKey() ? (r.daily.best ? fmtTime(r.daily.best) : `sector ${r.daily.deepest}`) : '—'],
     ];
     $('records-stats').innerHTML = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('');
+    const txn = Math.min(Save.meta.txRead, TRANSMISSIONS.length);
+    $('records-tx').innerHTML = txn ? TRANSMISSIONS.slice(0, txn).map((t, i) => `<div class="tx"><span class="from">${i + 1}. ${escapeHtml(t.from)}</span>${t.lines.map(escapeHtml).join('<br>')}</div>`).join('') + (txn < TRANSMISSIONS.length ? `<div class="tx dim">${TRANSMISSIONS.length - txn} more to come</div>` : '') : '<div class="tx dim">none yet</div>';
     $('records-codex').innerHTML = ZERO_DAYS.map((z) => Save.meta.zeroDays[z.id] ? `<div class="found">${escapeHtml(z.name)}</div>` : '<div>???</div>').join('');
     this.show('screen-records', { keep: !!keep && !!this.screen, modal: Game.scene !== 'title' });
   },
@@ -663,7 +736,7 @@ const UI = {
       const here = r === Game.room;
       x.fillStyle = here ? (Math.floor(Game.realT * 3) % 2 ? '#eaffef' : '#3cff6e') : r.visited ? (r.cleared ? '#2f8a4a' : '#8a6a20') : '#0f3a1c';
       x.fillRect(px + gap / 2, py + gap / 2, cell - gap, cell - gap);
-      const icon = { cache: '#ffb43a', oracle: '#4aa8ff', exit: '#eaffef', boss: '#ff4060', rabbit: '#ffffff' }[r.kind];
+      const icon = { cache: '#ffb43a', oracle: '#4aa8ff', exit: '#eaffef', boss: '#ff4060', rabbit: '#ffffff', backdoor: '#ff9a3c' }[r.kind];
       if (icon && !here) { x.fillStyle = icon; x.fillRect(px + cell / 2 - 1, py + cell / 2 - 1, 2, 2); }
     }
   },
@@ -675,6 +748,54 @@ function exploitPatternText(base) {
 }
 
 // The stats that would change if `item` were equipped, as ▲/▼ lines.
+// One thing to try next time, for whatever did the most damage.
+function traceTip(kind) {
+  const tips = [
+    [/^bug/, "bugs bite, then hop back: keep moving and they rarely land a second bite"],
+    [/watchdog/, 'watchdog.d flashes before it dashes: step or phase sideways on the flash'],
+    [/firewall/, 'firewall.sys fires a fan of three: phase through it, or stand in a gap'],
+    [/sentinel/, 'sentinels circle, then lunge in a line: keep them at range and sidestep'],
+    [/worm/, 'worms split when they die: back off before the last hit'],
+    [/exile/, 'exile.exe blinks, then fires a wide fan: phase into the spread'],
+    [/agent/i, 'agents dodge one shot, then pause: fire a burst, then keep firing'],
+    [/storm/, 'the code storm lights three columns: watch the warning and stand in a dark lane'],
+    [/volatile/, 'volatile processes burst when they die: step out of the ring'],
+  ];
+  for (const [re, tip] of tips) if (re.test(kind)) return tip;
+  return 'phasing through a red packet deletes it';
+}
+
+// The Daily Trace result as text, for the share sheet or the clipboard:
+// a block per sector (green cleared, red where it ended, dark not reached).
+function shareText(run) {
+  const cells = [1, 2, 3, 4, 5].map((n) => (run.victory || n < run.floorN ? '🟩' : n === run.floorN ? '🟥' : '⬛')).join('');
+  const lines = [`NEO · Daily Trace ${todayKey()}`, `${cells} ${run.victory ? 'ROOT ACCESS' : `sector ${run.floorN}`} · ${fmtTime(run.time)}`];
+  if (!run.victory) lines.push(`terminated by ${run.killedBy || 'unknown'}`);
+  lines.push(`${run.kills} kills · ${Math.floor(run.data)} data`);
+  return lines.join('\n');
+}
+
+function shareResult(run, btn) {
+  const text = shareText(run);
+  const done = (ok) => { btn.textContent = ok ? 'COPIED' : 'COPY FAILED'; };
+  try {
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) { navigator.share({ text }).then(() => done(true), () => {}); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(() => done(true), () => done(copyFallback(text))); return; }
+  } catch (e) { /* fall through */ }
+  done(copyFallback(text));
+}
+
+function copyFallback(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (e) { return false; }
+}
+
 function statDiffs(gear, patches, item, floorN) {
   const a = computeStats(gear, patches, floorN), b = computeStats({ ...gear, [item.slot]: item }, patches, floorN);
   const out = [];
@@ -704,6 +825,12 @@ function statDiffs(gear, patches, item, floorN) {
   num('thorns', a.thorns, b.thorns, i);
   num('data gain', a.data, b.data, (v) => '+' + p(v));
   num('item rarity', a.luck, b.luck, (v) => '+' + p(v));
+  num('damage taken', a.dmgTaken, b.dmgTaken, (v) => '+' + p(v), true);
+  num('enemy packet speed', a.packetSpeed, b.packetSpeed, (v) => '+' + p(v), true);
+  for (const id of PROTO_IDS) {
+    const x = a.protocols[id], y = b.protocols[id];
+    if (x !== y) out.push({ up: y > x, text: `${PROTOCOLS[id].name} protocol ${x} → ${y}${y >= 3 && x < 3 ? ' (' + PROTOCOLS[id].power + ')' : ''}` });
+  }
   if (a.weapon.base !== b.weapon.base) out.unshift({ up: true, text: `${T.exploits[a.weapon.base].name} → ${T.exploits[b.weapon.base].name}` });
   return out;
 }

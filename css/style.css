@@ -218,6 +218,12 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .up-item .pips { letter-spacing: 2px; color: var(--green); font-size: 16px; }
 .up-item .buy { min-width: 96px; min-height: 48px; font-size: 20px; background: transparent; border: 1px solid var(--green); color: var(--green); border-radius: 4px; }
 .up-item .buy:disabled { border-color: #1d4a2a; color: #2f5a3a; }
+.up-item .buy.toggle { color: var(--dim); border-color: #1d4a2a; }
+.up-item .buy.toggle.on { color: #ff9a3c; border-color: #ff9a3c; }
+.choices .proto { display: block; font-size: 17px; }
+.unstable { font-size: 18px; margin: 4px 0; line-height: 1.15; }
+.unstable .tag { color: #ff9a3c; letter-spacing: 1px; }
+.option .unstable { display: block; }
 .up-depth { margin: 14px 0 6px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: min(380px, 100%); }
 .up-depth .lbl { width: 100%; font-size: 20px; color: var(--dim); }
 .up-depth button { min-width: 52px; min-height: 48px; font-size: 22px; background: transparent; border: 1px solid #1d4a2a; color: var(--ink); }
@@ -226,7 +232,18 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .stats-table .k { color: var(--dim); }
 .stats-table .v { color: var(--ink); text-align: right; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; width: min(380px, 100%); }
+.tx-list { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; font-size: 19px; color: var(--ink); line-height: 1.15; }
+.tx-list .from { display: block; color: var(--green); font-size: 17px; letter-spacing: 1px; }
+.tx-list .dim { color: var(--dim); }
+.card .proto { display: block; font-size: 18px; margin: 2px 0 4px; }
 .chip { padding: 2px 8px; border: 1px solid #1d6a35; font-size: 18px; color: var(--green); }
+/* protocols: a tag on patch choices, and the loadout's list */
+.option .proto { display: block; font-size: 18px; margin-top: 2px; }
+.protocols { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; }
+.proto-row { border-left: 3px solid var(--pc); padding: 2px 8px; color: var(--dim); font-size: 17px; line-height: 1.15; }
+.proto-row .pn { display: flex; justify-content: space-between; color: var(--pc); font-size: 20px; letter-spacing: 1px; }
+.proto-row .pd.on { color: var(--ink); }
+.proto-row.full { background: rgba(255, 255, 255, 0.04); }
 .loadout-items { display: flex; flex-direction: column; gap: 8px; width: min(380px, 100%); }
 .loadout-items .card { width: 100%; padding: 8px 10px; }
 .loadout-items .card .name { font-size: 22px; }
@@ -236,6 +253,10 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .sum-lines { width: min(360px, 100%); font-size: 23px; text-align: left; display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin-bottom: 8px; }
 .sum-lines .k { color: var(--dim); white-space: nowrap; }
 .sum-lines .v { text-align: right; }
+.sum-trace { width: min(360px, 100%); text-align: left; border-left: 3px solid #ff6a7a; padding: 4px 10px; margin: 4px 0 10px; font-size: 19px; line-height: 1.15; color: var(--ink); }
+.sum-trace .th { color: #ff6a7a; letter-spacing: 2px; font-size: 18px; }
+.sum-trace .tip { color: var(--green); margin: 4px 0; }
+.sum-trace .hits { color: var(--dim); font-size: 17px; }
 .sum-unlocks { color: var(--gold); font-size: 21px; margin: 6px 0 10px; line-height: 1.2; }
 .confirm-text { font-size: 22px; color: var(--dim); max-width: 340px; }
 #screen-summary h2.won { color: #eaffef; }

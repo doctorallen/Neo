@@ -68,6 +68,9 @@ function updatePlayer(dt) {
   // regeneration (Blue Pill)
   if (s.powers.bluepill && run.hp < s.maxHp && !Game.flow) { p.regenAcc += dt; if (p.regenAcc >= 0.5) { healPlayer(0.5, false); p.regenAcc -= 0.5; } }
 
+  // the CRYPTO protocol's Zero Trust: a shield grows back after 6 s unhurt
+  if (s.powers.zerotrust && !p.shield) { p.ztT = (p.ztT || 0) + dt; if (p.ztT >= 6) { p.shield = true; p.ztT = 0; Sound.play('shield', { vol: 0.5 }); } }
+
   // the Daemon patch: a drone that orbits and fires on its own
   if (s.powers.daemon) updateDaemon(p, s, dt);
 
@@ -152,6 +155,7 @@ function startPhase(p, s, dir) {
   buzz(6);
   UI.hintDone('phase');
   if (s.powers.trinity) p.trailFrom = { x: p.x, y: p.y };
+  if (s.powers.decoy) Game.decoy = { x: p.x, y: p.y, t: 1.5, facing: p.facing };
 }
 
 // While phasing: enemy packets in the way are deleted, and with Glitch Step
@@ -299,8 +303,23 @@ function damagePlayer(amount, source) {
     UI.feed('> encryption held');
     return false;
   }
-  const dmg = Math.max(1, Math.round(amount * (1 - s.armor)));
+  if (p.shield) {
+    p.shield = false; p.ztT = 0;
+    p.invulnT = T.player.hurtInvuln;
+    Sound.play('shield_break');
+    spawnRing(p.x, p.y - 6, PROTOCOLS.crypto.color);
+    UI.feed('> zero trust: hit refused');
+    return false;
+  }
+  p.ztT = 0;
+  const dmg = Math.max(1, Math.round(amount * (1 + s.dmgTaken) * (1 - s.armor)));
   run.hp -= dmg;
+  // the trace the summary shows after a death: the last few hits, and the
+  // damage taken from each kind of process
+  const src = source || 'unknown process', kind = traceKind(src);
+  run.hits.push({ src, dmg });
+  if (run.hits.length > 5) run.hits.shift();
+  run.dmgBy[kind] = (run.dmgBy[kind] || 0) + dmg;
   p.invulnT = T.player.hurtInvuln;
   p.hurtT = 0.25;
   addFloat(p.x, p.y - 18, '-' + dmg, '#ff5a6a');
@@ -344,6 +363,16 @@ function damagePlayer(amount, source) {
     playerDies();
   }
   return true;
+}
+
+// What hurt Neo, by kind: an elite's name loses its modifier, and the
+// dream-named elites go back to what they are.
+function traceKind(src) {
+  let k = src.replace(/^(ENCRYPTED|OVERCLOCKED|REPLICATING|VOLATILE) /, '');
+  if (k === 'hypnos.d') k = 'sentinel';
+  if (k === 'rem_cycle') k = 'worm';
+  if (/agent/i.test(k)) k = /the Agent/.test(src) ? 'the Agent' : 'agent';
+  return k;
 }
 
 function healPlayer(n, show = true) {

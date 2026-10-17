@@ -942,6 +942,21 @@ function spr_oracle() {
   return spr_prop(P.c, '#000000');
 }
 
+// The backdoor: a tall rack with an amber screen showing an open padlock.
+function spr_backdoor() {
+  const P = spr_paint(12, 18);
+  const m = ['#14110e', '#24201a', '#38322a', '#4c453a'];
+  P.r(m[2], 0, 0, 12, 18); P.r(m[3], 0, 0, 12, 1); P.r(m[3], 0, 0, 1, 17); P.r(m[0], 11, 1, 1, 17); P.r(m[0], 0, 17, 12, 1);
+  // the screen
+  P.r('#1a0c04', 2, 2, 8, 7); P.r('#3a1a06', 3, 3, 6, 5);
+  P.r('#ff9a3c', 4, 3, 3, 1); P.r('#ff9a3c', 4, 4, 1, 1); P.r('#ff9a3c', 7, 3, 1, 2); // the shackle, open
+  P.r('#ffb43a', 4, 5, 4, 3); P.r('#3a1a06', 5, 6, 2, 1); P.r('#ffd890', 4, 5, 1, 1);
+  // drive bays and blinking lights
+  for (let y = 10; y <= 15; y += 2) { P.r(m[1], 2, y, 8, 1); P.r('#ff9a3c', 9, y, 1, 1); }
+  P.r('#3cff6e', 3, 11, 1, 1); P.r('#3cff6e', 5, 13, 1, 1);
+  return spr_prop(P.c, '#000000');
+}
+
 function spr_mirror() {
   const P = spr_paint(12, 14);
   // frame
@@ -1378,6 +1393,7 @@ function buildSprites() {
       cache: { closed: spr_cache(false), open: spr_cache(true) },
       phone: { idle: spr_phone(false, 0), ring: [spr_phone(true, 0), spr_phone(true, 1)] },
       oracle: spr_oracle(),
+      backdoor: spr_backdoor(),
       mirror: spr_mirror(),
       window: spr_window(),
       sign: spr_signs(),

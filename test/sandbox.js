@@ -26,7 +26,8 @@ function sandbox(files) {
   // tests need
   const src = files.map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
   const expose = '\n;globalThis.__neo = { T, Rng, hashInts, hashString, mulberry32, generateFloor, floorHash, roomConnected, fillRoomTiles, Room, ROOM_TEMPLATES, ROOM_SIZE, DIRS, OPP, WALL, FLOOR, BLOCK, PIT, DOOR, TILE,'
-    + (files.some((f) => f.endsWith('items.js')) ? ' rollItem, rollRarity, computeStats, compareVerdict, estimateDps, AFFIXES, AFFIX_WEIGHTS, ZERO_DAYS, ZD, SLOTS, zeroDayPool, exploitPool, Save, PATCHES, PATCH, patchOffer, fmtAffix, itemName,' : '')
+    + (files.some((f) => f.endsWith('items.js')) ? ' rollItem, rollRarity, computeStats, compareVerdict, estimateDps, AFFIXES, AFFIX_WEIGHTS, ZERO_DAYS, ZD, SLOTS, zeroDayPool, exploitPool, Save, PATCHES, PATCH, patchOffer, fmtAffix, itemName, PROTOCOLS, PROTO_IDS, protocolCounts, UNSTABLE, DRAWBACKS,' : '')
+    + (files.some((f) => f.endsWith('game.js')) ? ' Game,' : '')
     + ' };';
   vm.runInContext(src + expose, ctx, { filename: 'neo-sandbox.js' });
   return ctx.__neo;

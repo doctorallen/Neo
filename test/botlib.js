@@ -56,7 +56,7 @@ function installBot() {
       const f = Game.run.floor, room = Game.room;
       for (const [d, l] of Object.entries(room.doors)) {
         if (l.hidden) continue;
-        if (!l.to.visited && (l.to.kind === 'cache' || l.to.kind === 'oracle' || l.to.kind === 'rabbit')) return d;
+        if (!l.to.visited && (l.to.kind === 'cache' || l.to.kind === 'oracle' || l.to.kind === 'rabbit' || l.to.kind === 'backdoor')) return d;
       }
       // breadth-first towards the exit (or the boss)
       const target = f.rooms.find((r) => r.kind === 'exit' || r.kind === 'boss');
@@ -113,7 +113,7 @@ function installBot() {
       for (const pr of room.props) {
         const { x, y } = propPos(pr);
         if ((pr.kind === 'cache' || pr.kind === 'rabbitcache') && !pr.open) { const [dx, dy] = this.stepToward(x, y); this.go(dx, dy); return 'ok'; }
-        if (pr.kind === 'oracle' && !pr.spent) { const [dx, dy] = this.stepToward(x, y); this.go(dx, dy); return 'ok'; }
+        if ((pr.kind === 'oracle' || pr.kind === 'backdoor') && !pr.spent) { const [dx, dy] = this.stepToward(x, y); this.go(dx, dy); return 'ok'; }
         if (pr.kind === 'phone' && room.cleared && !pr.answered) { const [dx, dy] = this.stepToward(x, y); this.go(dx, dy); return 'ok'; }
       }
       // a rabbit showing the way: wait for it

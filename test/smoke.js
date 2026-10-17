@@ -96,6 +96,14 @@ async function phone(browser) {
   await shot(page, 'smoke-upgrades');
   await tap(page, '#up-list .buy');
   check(await page.evaluate(() => Save.rank('hp') === 1 && Save.meta.data === 475), 'phone: buying Hardened Kernel failed');
+  // after a win, countermeasures can be switched on, and a run takes them along
+  await page.evaluate(() => { Save.meta.maxDepth = 2; UI.buildUpgrades(); });
+  check(await page.evaluate(() => document.querySelectorAll('#up-counter [data-counter]').length === T.counter.length), 'phone: no countermeasures at the terminal after a win');
+  await tap(page, '#up-counter [data-counter="fastpackets"]');
+  check(await page.evaluate(() => Save.meta.counter.fastpackets === true && activeCounters().join() === 'fastpackets'), 'phone: the countermeasure toggle did nothing');
+  await tap(page, '#up-counter [data-counter="fastpackets"]');
+  check(await page.evaluate(() => !Save.meta.counter.fastpackets), 'phone: the countermeasure did not switch off');
+  await page.evaluate(() => { Save.meta.maxDepth = 1; UI.buildUpgrades(); });
   await tap(page, '#screen-upgrades [data-back]');
   check(!(await visible(page, 'screen-upgrades')), 'phone: the terminal did not close');
   // out of the door, into the code
@@ -227,11 +235,18 @@ async function phone(browser) {
   await sleep(1800);
   await shot(page, 'smoke-summary');
   check(await page.evaluate(() => Save.data.checkpoint === null), 'phone: the checkpoint survived death');
+  check(await page.evaluate(() => { const t = document.getElementById('sum-trace'); return !t.hidden && /TRACE/.test(t.textContent) && /the smoke test/.test(t.textContent); }), 'phone: no trace of what killed Neo on the summary');
+  check(!(await visible(page, 'sum-share')), 'phone: a share button on a run that was not the Daily Trace');
   await tap(page, '#sum-wake');
   check(await page.evaluate(() => Game.scene === 'hub' && Game.hub && !Game.hub.full), 'phone: wake up did not give the short wake');
   await run(page, 1);
   check(await page.evaluate(() => Game.hub.asleep), 'phone: Neo was not asleep at the desk after the run');
-  await run(page, 5);
+  // the run brought a transmission, typed on the monitor before the knock
+  check(await page.evaluate(() => !!Game.hub.tx && Game.hub.tx.from === TRANSMISSIONS[0].from && Save.meta.txRead === 1), 'phone: no transmission after the run');
+  let sawTx = false;
+  for (let i = 0; i < 40 && !sawTx; i++) { await run(page, 0.25); sawTx = /incoming|made it out/.test(await page.evaluate(() => document.getElementById('crt-line').textContent)); }
+  check(sawTx, 'phone: the transmission never showed on the monitor');
+  await run(page, 10);
   check(await page.evaluate(() => !Game.hub.asleep), 'phone: the short wake never finished');
   for (const e of errors) failures.push('phone: page error: ' + e);
   await page.close();
@@ -289,6 +304,12 @@ async function desktop(browser) {
   check(aimed !== null && Math.cos(aimed) > 0, `desktop: the mouse aim points the wrong way (${aimed})`);
   await run(page, 0.2);
   check(!(await page.evaluate(() => Game.player.firing)), 'desktop: still hacking after the mouse button came up');
+  // the Daily Trace: countermeasures stay out of it, and its result can be shared
+  const daily = await page.evaluate(() => { Save.meta.maxDepth = 2; Save.meta.counter = { strictgc: true }; startRun({ seed: 5, daily: true }); const c = Game.run.counter.length; Game.run.killedBy = 'bug'; endRun(false); Save.meta.counter = {}; return { c, t: shareText(Game.run) }; });
+  check(daily.c === 0, 'desktop: countermeasures leaked into the Daily Trace');
+  check(/Daily Trace/.test(daily.t) && /🟥/.test(daily.t), `desktop: the share text is wrong: ${daily.t}`);
+  await sleep(2500);
+  check(await visible(page, 'sum-share'), 'desktop: no SHARE RESULT after the Daily Trace');
   for (const e of errors) failures.push('desktop: page error: ' + e);
   await page.close();
 }

@@ -3,12 +3,14 @@
 // mix matches the weights, luck pushes it rarer, every affix and starting
 // Zero-Day can drop (and none before sector 2 has been reached), random
 // builds never break a stat cap or produce a non-number, and patch offers
-// respect their limits.
+// respect their limits. Protocols count and pay out as described, offers
+// lean towards them, Unstable items carry a real drawback, and the
+// Backdoor's price and the countermeasures' Data show up in the stats.
 const { sandbox } = require('./sandbox');
 const { finish } = require('./lib-node');
 
 const N = sandbox(['js/util.js', 'js/tuning.js', 'js/save.js', 'js/rooms.js', 'js/dungeon.js', 'js/items.js', 'js/patches.js', 'js/game.js']);
-const { T, Rng, rollItem, rollRarity, computeStats, compareVerdict, estimateDps, AFFIXES, ZERO_DAYS, SLOTS, Save, PATCHES, PATCH, patchOffer } = N;
+const { T, Rng, rollItem, rollRarity, computeStats, compareVerdict, estimateDps, AFFIXES, ZERO_DAYS, SLOTS, Save, PATCHES, PATCH, patchOffer, PROTOCOLS, PROTO_IDS, protocolCounts, Game, fmtAffix } = N;
 const failures = [];
 Save.load();
 const rng = new Rng(12345);
@@ -91,6 +93,56 @@ for (let i = 0; i < 500; i++) {
   const o = patchOffer(new Rng(i), [], 1, 3);
   if (new Set(o).size !== o.length) failures.push('a patch offered twice in one pick');
   if (o.some((id) => PATCH[id].rare)) failures.push('a rare patch offered after floor 1');
+}
+
+// protocols: everything is tagged; pieces count once each; the bonus at 2
+// and the power at 3
+for (const p of PATCHES) if (!PROTOCOLS[p.proto]) failures.push(`patch ${p.id} has no protocol`);
+for (const z of ZERO_DAYS) if (!PROTOCOLS[z.proto]) failures.push(`Zero-Day ${z.id} has no protocol`);
+const empty = { exploit: null, coat: null, shades: null, implant: null };
+if (protocolCounts(empty, ['sudo', 'sudo', 'sudo']).kernel !== 1) failures.push('stacks of one patch counted as several protocol pieces');
+{
+  const base = computeStats(empty, ['sudo'], 1), two = computeStats(empty, ['sudo', 'root'], 1), three = computeStats(empty, ['sudo', 'root', 'leak'], 1);
+  if (!(two.weapon.dmg > base.weapon.dmg * 1.05)) failures.push('KERNEL 2 gave no damage');
+  if (base.powers.rootshell || two.powers.rootshell || !three.powers.rootshell) failures.push('Root Shell not exactly at KERNEL 3');
+  const zd = { ...empty, implant: { slot: 'implant', rarity: 4, ilvl: 1, implicit: [], affixes: [], unique: 'cookie' } };
+  if (protocolCounts(zd, ['gc', 'firewall']).crypto !== 3 || !computeStats(zd, ['gc', 'firewall'], 1).powers.zerotrust) failures.push("an equipped Zero-Day doesn't count towards its protocol");
+  const gh = computeStats(empty, ['hotswap', 'ballet', 'glitchstep'], 1);
+  if (!gh.powers.decoy) failures.push('GHOST 3 gave no decoy');
+  if (!computeStats(empty, ['multithread', 'daisy', 'echo'], 1).powers.botnet) failures.push('NETWORK 3 gave no Botnet');
+}
+// offers lean towards the protocols a build runs
+{
+  const kernelShare = (taken) => { let k = 0, n = 0; for (let i = 0; i < 3000; i++) for (const id of patchOffer(new Rng(50000 + i), taken, 1, 3)) { n++; if (PATCH[id].proto === 'kernel') k++; } return k / n; };
+  const plain = kernelShare(['firewall']), leaning = kernelShare(['firewall', 'sudo', 'root']);
+  if (!(leaning > plain * 1.15)) failures.push(`offers don't lean towards a protocol: ${plain.toFixed(3)} → ${leaning.toFixed(3)}`);
+}
+// Unstable items: only Rares and Epics, about the planned share, named, and the drawback bites
+{
+  const ur = new Rng(4242);
+  let rares = 0, unstable = 0;
+  for (let i = 0; i < 20000; i++) {
+    const it = rollItem(ur, { ilvl: 1 + (i % 5) });
+    if (it.unstable && (it.rarity < 2 || it.rarity > 3 || it.unique)) failures.push(`an Unstable ${it.rarity} item`);
+    if (it.rarity === 2 || it.rarity === 3) { rares++; if (it.unstable) unstable++; }
+    if (it.unstable && !/^Unstable /.test(it.name)) failures.push(`an Unstable item named ${it.name}`);
+    if (it.unstable && /undefined|NaN/.test(fmtAffix(it.unstable.down.id, it.unstable.down.v))) failures.push('a drawback that reads badly');
+  }
+  const share = unstable / rares;
+  if (Math.abs(share - T.unstable.chance) > 0.03) failures.push(`Unstable share ${share.toFixed(3)}, wants about ${T.unstable.chance}`);
+  const frag = { slot: 'coat', rarity: 2, ilvl: 1, implicit: [], affixes: [], unique: null, unstable: { up: { id: 'dmg', v: 0.35 }, down: { id: 'fragile', v: 0.15 } } };
+  const sf = computeStats({ ...empty, coat: frag }, [], 1);
+  if (Math.abs(sf.dmgTaken - 0.15) > 1e-9 || !(sf.weapon.dmg > computeStats(empty, [], 1).weapon.dmg)) failures.push('an Unstable item\'s upside or drawback did nothing');
+  const bloat = { ...frag, unstable: { up: { id: 'rate', v: 0.35 }, down: { id: 'bloat', v: 20 } } };
+  if (computeStats({ ...empty, coat: bloat }, [], 1).maxHp !== T.player.hp - 20) failures.push('bloat did not cut max integrity');
+}
+// the Backdoor's price and the countermeasures' Data, through the run
+{
+  Game.run = { hpCut: 0.3, counter: ['strictgc', 'encrypted'], depth: 1 };
+  const s = computeStats(empty, [], 1);
+  if (s.maxHp !== Math.round(T.player.hp * 0.7)) failures.push(`the Backdoor's cut gave max integrity ${s.maxHp}`);
+  if (Math.abs(s.data - 0.4) > 1e-9) failures.push(`countermeasures gave ${s.data} Data, want 0.4`);
+  Game.run = null;
 }
 
 // each exploit's single-target damage per second at item level 1, for the record

@@ -29,23 +29,62 @@ function buildApartment() {
   return room;
 }
 
+// Transmissions: after every run, won or lost, the next one is waiting on
+// the monitor. Read in order they hint, never say, where Neo really is. They
+// can be read again in Records. (No line may say "dream".)
+const TRANSMISSIONS = [
+  { from: 'MORPHEUS', lines: ['You made it out.', 'Most never open the door.'] },
+  { from: 'TRINITY', lines: ["They're watching the door.", "Don't stop moving."] },
+  { from: 'MORPHEUS', lines: ['Every sector you crack,', 'they rebuild behind you.'] },
+  { from: 'UNKNOWN', lines: ['What time is it, Neo?', 'Look at the clock.'] },
+  { from: 'TRINITY', lines: ['I walked past your building.', 'Your light was on. 3:14.'] },
+  { from: 'AGENT', lines: ['Mr. Anderson.', 'You keep coming back.'] },
+  { from: 'MORPHEUS', lines: ['Have you noticed', 'the rain never lands?'] },
+  { from: 'THE ORACLE', lines: ["Don't worry about the vase.", "You'll fix it in the morning."] },
+  { from: 'TRINITY', lines: ['When did you last eat?', 'When did you last go out?'] },
+  { from: 'MORPHEUS', lines: ['The door was never locked.', 'So who is knocking?'] },
+  { from: 'AGENT', lines: ['We have your file.', 'Every attempt. Every one.'] },
+  { from: 'UNKNOWN', lines: ['> ps -o state anderson', '> S (interruptible)'] },
+  { from: 'THE ORACLE', lines: ['You already know', 'where you really are.'] },
+  { from: 'TRINITY', lines: ['Neo. Your hands.', 'Look at your hands.'] },
+  { from: 'MORPHEUS', lines: ['What is real?', 'How do you define real?'] },
+  { from: '???', lines: ['Wake up, Neo.', 'Wake up.', 'WAKE UP.'] },
+];
+
 // The beats of the opening. `full` is the whole scene; otherwise the short
 // version. `won` holds the sleeping shot longer, with ROOT ACCESS on the
-// screen for a second (the run happened there).
-function hubScript(full, won) {
+// screen for a second (the run happened there). `tx`, a transmission, is
+// typed out before the knock.
+function hubScript(full, won, tx = null) {
   const S = [];
+  const transmission = () => {
+    if (!tx) return;
+    S.push({ k: 'type', text: `incoming: ${tx.from}`, hold: 0.6 });
+    for (const line of tx.lines) S.push({ k: 'type', text: line, hold: 1.3 });
+  };
   S.push({ k: 'sleep', d: won ? 3.0 : full ? 2.0 : 1.2, rootAccess: won });
   if (full) {
     S.push({ k: 'type', text: 'Wake up, Neo...', hold: 1.2 });
     S.push({ k: 'stir', d: 1.0 });
     S.push({ k: 'type', text: 'The Matrix has you...', hold: 1.2 });
     S.push({ k: 'type', text: 'Follow the white rabbit.', hold: 1.0 });
+    transmission();
     S.push({ k: 'type', text: 'Knock, knock, Neo.', hold: 0.5 });
   } else {
     S.push({ k: 'type', text: 'Wake up, Neo.', hold: 0.5 });
+    transmission();
   }
   S.push({ k: 'knock' });
   return S;
+}
+
+// The next unread transmission, marked read; null when there's none.
+function takeTransmission() {
+  const m = Save.meta;
+  if (m.txRead >= m.tx || m.tx < 1) return null;
+  m.txRead = m.tx;
+  Save.write();
+  return TRANSMISSIONS[Math.min(m.tx, TRANSMISSIONS.length) - 1];
 }
 
 function enterHub({ won = false } = {}) {
@@ -55,12 +94,13 @@ function enterHub({ won = false } = {}) {
   const room = buildApartment();
   Game.room = room;
   Game.enemies = []; Game.shots = []; Game.bullets = []; Game.hazards = []; Game.drops = []; Game.fx = []; Game.floats = []; Game.critters = [];
-  Game.boss = null; Game.transition = null; endBulletTime();
+  Game.boss = null; Game.transition = null; Game.decoy = null; endBulletTime();
   Game.player = makePlayer();
   Game.player.coat = false;
   Game.player.x = HUB_WAKE.x; Game.player.y = HUB_WAKE.y;
   Game.player.hidden = true; // he's asleep at the desk until the knock
-  Game.hub = { room, full, won, script: hubScript(full, won), i: 0, t: 0, typed: '', asleep: true, stir: false, doorOpen: 0, doorShake: 0, knockIdle: 0, knocked: false, leaving: false, crt: false, nearTerminal: false, bulbT: 0, tailT: -1, skip: false };
+  const tx = takeTransmission();
+  Game.hub = { room, full, won, tx, script: hubScript(full, won, tx), i: 0, t: 0, typed: '', asleep: true, stir: false, doorOpen: 0, doorShake: 0, knockIdle: 0, knocked: false, leaving: false, crt: false, nearTerminal: false, bulbT: 0, tailT: -1, skip: false };
   Game.flow = null;
   updateCamera(true);
   Sound.music('hub');

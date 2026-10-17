@@ -27,6 +27,9 @@ function spawnBullet(x, y, a, speed, dmg, src) {
   const boss = Game.room && Game.room.kind === 'boss';
   const cap = boss ? T.enemyBullet.maxAliveBoss : T.enemyBullet.maxAlive;
   if (Game.bullets.length >= cap) return false;
+  // Packet Acceleration, and an Unstable item's drawback
+  const s = Game.run && Game.run.stats;
+  speed *= 1 + (counterOn('fastpackets') ? 0.2 : 0) + (s ? s.packetSpeed : 0);
   Game.bullets.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, dmg, src, r: T.enemyBullet.radius, life: 6 });
   return true;
 }

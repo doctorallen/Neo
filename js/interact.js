@@ -59,6 +59,7 @@ function pickupDrop(d) {
 function receiveItem(it, done = () => {}, drop = null) {
   const run = Game.run;
   if (it.unique) discoverZeroDay(it.unique);
+  if (it.rarity >= 2) run.rareSeen = true;
   Sound.play('pickup_' + it.rarity);
   buzz(8);
   if (!run.gear[it.slot]) { equipItem(it); UI.toast(`EQUIPPED ${it.name}`, it.rarity); done(); return; }
@@ -117,6 +118,8 @@ function updateProps(dt) {
       }
     } else if (pr.kind === 'oracle') {
       if (!pr.spent && d < 14) { pr.spent = true; UI.openOracle(oracleEvent(room)); }
+    } else if (pr.kind === 'backdoor') {
+      if (!pr.spent && d < 14) { pr.spent = true; UI.openOracle(backdoorDeal()); }
     } else if (pr.kind === 'phone') {
       if (!room.cleared) continue;
       pr.ringT = (pr.ringT || 0) - dt;
@@ -138,14 +141,18 @@ function openCache(pr) {
     receiveItem(it);
     return;
   }
-  let count = T.drops.cacheChoices + (s.powers.scavenger ? 1 : 0) + (s.powers.keymaker ? 1 : 0);
+  let count = T.drops.cacheChoices + (s.powers.scavenger ? 1 : 0) + (s.powers.keymaker ? 1 : 0) - (counterOn('encrypted') ? 1 : 0);
+  count = Math.max(1, count);
   const min = n >= 5 ? 2 : 1;
   const items = [];
   for (let i = 0; i < count; i++) {
     const opts = { ilvl: n, luck: s.luck, min };
     if (i === 0 && (n === 2 || n === 4)) opts.slot = 'exploit';
+    // bad-luck protection: no Rare yet by the second sector's cache, so here's one
+    if (i === count - 1 && n >= 2 && !run.rareSeen && !items.some((it) => it.rarity >= 2)) opts.min = 2;
     items.push(rollItem(run.rng, opts));
   }
+  if (items.some((it) => it.rarity >= 2)) run.rareSeen = true;
   UI.openCache(items, (chosen) => {
     for (const it of items) {
       if (it === chosen) continue;
@@ -176,6 +183,27 @@ const ORACLE_EVENTS = [
     { label: 'Blue: heal to full, +20 max integrity', act: () => { Game.run.pill = 'blue'; refreshStats(); Game.run.hp = Game.run.stats.maxHp; } },
   ] },
 ];
+
+// The open port: two patches (rare ones likelier), either installed now for
+// a cut to max integrity that lasts the run.
+function backdoorDeal() {
+  const r = Game.run, B = T.backdoor;
+  const offer = patchOffer(r.rng, r.patches, 3, 2, 3);
+  const cut = Math.round(B.hpCut * 100);
+  return {
+    header: 'BACKDOOR', color: '#ff9a3c', title: 'Open port.', text: `Install a patch now. The price: −${cut}% max integrity for the rest of the run.`,
+    choices: offer.map((id) => ({
+      label: `${escapeHtml(PATCH[id].name)}: ${escapeHtml(PATCH[id].desc)}${UI.protoChip(PATCH[id].proto, r.stats.protocols, !r.patches.includes(id))}`,
+      act: () => {
+        r.patches.push(id);
+        r.hpCut = Math.min(B.hpCutMax, (r.hpCut || 0) + B.hpCut);
+        if (PATCH[id].onTake) PATCH[id].onTake();
+        refreshStats();
+        UI.feed(`> installed ${PATCH[id].name}. −${cut}% integrity`);
+      },
+    })),
+  };
+}
 
 function oracleEvent(room) {
   const rng = new Rng(hashInts(room.seed, 7));

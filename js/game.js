@@ -41,14 +41,36 @@ function newRun({ seed, depth = 1, daily = false } = {}) {
     kills: 0, eliteKills: 0, time: 0, data: 0, dataCommitted: 0,
     reviveUsed: false, oneCoatFloor: 0, best: null, killedBy: '', victory: false,
     unlockedZeroDay: null, newUnlocks: [], roomsCleared: 0,
+    hpCut: 0, rareSeen: false, counter: [], hits: [], dmgBy: {},
   };
+}
+
+// Is this countermeasure on for the run being played?
+function counterOn(id) {
+  const r = Game.run;
+  return !!(r && r.counter && r.counter.includes(id));
+}
+
+// The countermeasures switched on at the terminal (once a win has unlocked them).
+function activeCounters() {
+  if (Save.meta.maxDepth <= 1) return [];
+  return T.counter.filter((c) => Save.meta.counter[c.id]).map((c) => c.id);
 }
 
 function refreshStats() {
   const r = Game.run;
   if (!r) return;
   const before = r.stats ? r.stats.maxHp : null;
+  const was = r.stats && r.stats.protocols;
   r.stats = computeStats(r.gear, r.patches, r.floorN || 1);
+  // a protocol reaching its bonus or its power says so
+  if (was) {
+    for (const id of PROTO_IDS) {
+      const a = was[id], b = r.stats.protocols[id], P = PROTOCOLS[id];
+      if (b >= 3 && a < 3) { UI.feed(`> protocol ${P.name}: ${P.power.toLowerCase()}`); UI.banner(P.power.toUpperCase()); Sound.play('focus_ready'); }
+      else if (b >= 2 && a < 2) UI.feed(`> protocol ${P.name}: ${P.two}`);
+    }
+  }
   // gaining max integrity raises integrity with it; losing it clips
   if (before !== null && r.stats.maxHp > before) r.hp += r.stats.maxHp - before;
   r.hp = Math.min(r.hp, r.stats.maxHp);
@@ -63,8 +85,10 @@ function noteBest(item) {
 function startRun(opts = {}) {
   const run = newRun(opts);
   Game.run = run;
+  run.counter = run.daily ? [] : activeCounters();
   const rng = new Rng(hashInts(run.seed, 0xbeef));
   run.gear.exploit = starterExploit(rng);
+  if (run.gear.exploit.rarity >= 2) run.rareSeen = true;
   run.stats = computeStats(run.gear, run.patches, 1);
   run.hp = run.stats.maxHp;
   Save.data.records.runs++;
@@ -82,6 +106,7 @@ function continueRun() {
     gear: copy(c.gear), patches: copy(c.patches), hp: c.hp, focus: c.focus || 0, kills: c.kills || 0, eliteKills: c.eliteKills || 0,
     time: c.time || 0, data: c.data || 0, reviveUsed: !!c.reviveUsed, best: c.best || null,
     roomsCleared: c.roomsCleared || 0, pill: c.pill || null, spoonFloor: c.spoonFloor || 0, extraPick: !!c.extraPick,
+    hpCut: Number(c.hpCut) || 0, rareSeen: !!c.rareSeen, counter: Array.isArray(c.counter) ? c.counter.slice() : [],
     newUnlocks: Array.isArray(c.newUnlocks) ? c.newUnlocks.slice() : [],
   });
   // Data already banked (at the checkpoint, or when the page was closed
@@ -105,6 +130,7 @@ function writeCheckpoint() {
     hp: r.hp, focus: r.focus, kills: r.kills, eliteKills: r.eliteKills, time: r.time, data: r.data, banked: r.dataCommitted,
     reviveUsed: r.reviveUsed, best: copy(r.best), roomsCleared: r.roomsCleared, pill: r.pill || null,
     spoonFloor: r.spoonFloor || 0, extraPick: !!r.extraPick, newUnlocks: r.newUnlocks.slice(),
+    hpCut: r.hpCut || 0, rareSeen: !!r.rareSeen, counter: r.counter.slice(),
   };
   Save.write();
 }
@@ -178,7 +204,7 @@ function enterRoom(room, from) {
   for (const c of Game.critters) if (c.kind === 'rabbit') revealHidden(c.room, c.dir);
   Game.critters = [];
   Game.enemies = []; Game.shots = []; Game.bullets = []; Game.hazards = [];
-  Game.fx = []; Game.floats = []; Game.boss = null;
+  Game.fx = []; Game.floats = []; Game.boss = null; Game.decoy = null;
   room.drops = room.drops || [];
   Game.drops = room.drops;
   const p = Game.player;
@@ -189,11 +215,21 @@ function enterRoom(room, from) {
   room.coilUsed = false;
   Game.idleT = 0;
   updateCamera(true);
-  if (!room.cleared && (room.kind === 'combat' || room.kind === 'exit' || room.kind === 'boss')) beginFight(room);
+  const honeypot = room.kind === 'backdoor' && room.variant === 'honeypot';
+  if (!room.cleared && (room.kind === 'combat' || room.kind === 'exit' || room.kind === 'boss' || honeypot)) beginFight(room);
   else Sound.setTension(0);
   if (firstVisit && room.cat) spawnCat(room);
   if (firstVisit && room.kind === 'cache') UI.hint('decrypt');
   if (firstVisit && room.kind === 'oracle') UI.feed('> terminal found. cookies?');
+  if (firstVisit && honeypot) UI.feed('> honeypot: 2 elites guard it');
+  // a backdoor next door says what it is, so going in is a choice
+  for (const d of Object.values(room.doors)) {
+    const b = d.to;
+    if (b && b.kind === 'backdoor' && !b.visited && !d.hidden && !b.announced) {
+      b.announced = true;
+      UI.feed(b.variant === 'honeypot' ? '> backdoor: honeypot. elites, epic loot' : '> backdoor: open port. a patch, at a price');
+    }
+  }
   UI.onRoomChange();
 }
 
@@ -244,6 +280,13 @@ function clearRoom(room) {
   }
   if (room.kind === 'exit') { room.phoneRinging = true; UI.hint('phone'); }
   if (room.kind === 'boss') bossDefeated();
+  // the honeypot's prize
+  if (room.kind === 'backdoor') {
+    const c = room.centre();
+    dropItem(c.x, c.y, rollItem(r.rng, { ilvl: r.floorN, luck: r.stats.luck, min: T.backdoor.prizeMin }));
+    addData(T.backdoor.prizeData);
+    UI.feed('> honeypot drained');
+  }
   if (Game.drops.some((d) => d.kind === 'item')) UI.hint('loot');
   Save.write();
 }
@@ -313,6 +356,8 @@ function endRun(victory) {
   }
   Save.data.checkpoint = null;
   Save.meta.lastWin = victory;
+  // every run, won or lost, brings the next transmission
+  if (Save.meta.tx < TRANSMISSIONS.length) Save.meta.tx++;
   Save.write();
   Game.enemies = []; Game.bullets = []; Game.hazards = []; Game.shots = [];
   endBulletTime();

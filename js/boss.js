@@ -24,8 +24,9 @@ function setupAgent(e) {
 }
 
 function agentDodgeCd(e) {
-  if (!e.isBoss) return T.agent.dodgeCd;
-  return e.phase === 1 ? T.boss.dodgeCd : T.agent.dodgeCd;
+  const k = counterOn('adaptive') ? 0.5 : 1;
+  if (!e.isBoss) return T.agent.dodgeCd * k;
+  return (e.phase === 1 ? T.boss.dodgeCd : T.agent.dodgeCd) * k;
 }
 
 // Sidestep a shot about to land: off to whichever side is open.

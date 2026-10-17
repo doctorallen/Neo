@@ -43,6 +43,18 @@ A winning run takes about 3:00–4:45 of game time, or **about 3.5–5 minutes**
 
 Same 16 seeds, fresh, "human" bot: **9/16 won** (was 7/16 standing still to fire). Winning runs took 3:05–5:40 of game time. God-mode runs: 197 s, 231 s, 217 s. Enemy numbers were left alone, because the bot doesn't pay the cost of steering and aiming with two thumbs.
 
+### After the roguelike enhancements (decisions 40–46)
+
+The autopilot takes every Backdoor (honeypot or open port) and the first patch offered, which now leans towards protocols. 32 seeds, fresh, "human" bot:
+
+| Tuning | Wins | Notes |
+|---|---|---|
+| Unchanged | 23/32 (72%) | The new rewards add real power: protocol bonuses and powers, Backdoor patches, Epic prizes, Unstable items |
+| Enemy damage ×1.25 (was ×1.1) | 23/32 | Only moved deaths earlier (7 of 9 on sector 2), so it was reverted |
+| **Kept:** per-sector growth of enemy integrity +45% (was +35%) and damage +40% (was +30%) | **16/32 (50%)** | Deaths spread over all five sectors; winning runs average 4:18 of game time |
+
+The new power mostly pays off in later sectors, so steeper scaling per sector answers it without making sector 1 harder. Depth 3–5 with every upgrade hasn't been re-measured since. **Expect the Backdoor and the protocol powers to need tuning once a person plays:** a person won't take every Backdoor.
+
 ## What changed because of these numbers
 
 1. **Fights were too long.**

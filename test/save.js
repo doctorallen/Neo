@@ -65,7 +65,7 @@ const ready = (page) => page.waitForFunction(() => typeof Game !== 'undefined' &
       UI.hide(); stopRain(); Save.meta.introSeen = true;
       startRun({ seed: 777 });
       const startGear = JSON.stringify(Game.run.gear);
-      Game.run.pill = 'blue'; writeCheckpoint();
+      Game.run.pill = 'blue'; Game.run.hpCut = 0.15; Game.run.counter = ['strictgc']; Game.run.rareSeen = true; writeCheckpoint();
       equipItem(rollItem(Game.run.rng, { slot: 'coat', ilvl: 1, rarity: 2 }));
       Game.run.patches.push('sudo');
       Save.write();
@@ -81,12 +81,13 @@ const ready = (page) => page.waitForFunction(() => typeof Game !== 'undefined' &
     const r2 = await page.evaluate(() => {
       const bank = Save.meta.data;
       continueRun();
-      const s = { coat: Game.run.gear.coat, patches: Game.run.patches.length, maxHp: Game.run.stats.maxHp };
+      const s = { coat: Game.run.gear.coat, patches: Game.run.patches.length, maxHp: Game.run.stats.maxHp, hpCut: Game.run.hpCut, counter: Game.run.counter.join(), rareSeen: Game.run.rareSeen };
       addData(50); commitData();
       return { ...s, gained: Save.meta.data - bank };
     });
     check(r2.coat === null && r2.patches === 0, 'Continue brought back gear taken after the checkpoint');
-    check(r2.maxHp === 120, `the blue pill was lost on Continue (max integrity ${r2.maxHp})`);
+    check(r2.maxHp === Math.round(120 * 0.85), `the blue pill or the Backdoor's cut was lost on Continue (max integrity ${r2.maxHp})`);
+    check(r2.hpCut === 0.15 && r2.counter === 'strictgc' && r2.rareSeen, `the Backdoor's cut, the countermeasures or bad-luck protection were lost on Continue: ${JSON.stringify(r2)}`);
     check(r2.gained <= 1, `the floor's Data was banked twice after a reload (${r2.gained} more)`);
     for (const e of errors) failures.push('snapshot: page error: ' + e);
     await page.close();
@@ -105,6 +106,8 @@ const ready = (page) => page.waitForFunction(() => typeof Game !== 'undefined' &
     const s = await page.evaluate(() => ({ music: Save.settings.music, data: Save.meta.data, cp: Save.data.checkpoint, scene: Game.scene }));
     check(typeof s.music === 'number' && Number.isFinite(s.data) && s.scene === 'title', `${label}: didn't fall back to defaults: ${JSON.stringify(s)}`);
     check(s.cp === null, `${label}: an invalid checkpoint was kept`);
+    const meta = await page.evaluate(() => ({ tx: Save.meta.tx, txRead: Save.meta.txRead, counter: typeof Save.meta.counter }));
+    check(meta.tx === 0 && meta.txRead === 0 && meta.counter === 'object', `${label}: the new progress fields have no defaults: ${JSON.stringify(meta)}`);
     // and the game still plays
     await page.evaluate(() => { UI.hide(); stopRain(); startRun({ seed: 5 }); for (let i = 0; i < 120; i++) Game.step(1 / 60); Game.render(); });
     for (const e of errors) failures.push(`${label}: page error: ${e}`);

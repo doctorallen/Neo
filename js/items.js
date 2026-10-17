@@ -37,6 +37,21 @@ const AFFIXES = {
   luck: { label: 'item rarity', pre: 'Lucky', suf: 'of Fortune', range: [0.05, 0.08, 0.12, 0.18], kind: 'pct' },
 };
 
+// Drawbacks, only ever on Unstable items, paired with a strong upside.
+const DRAWBACKS = {
+  fragile: { label: 'damage taken', kind: 'pct' },
+  traced: { label: 'enemy packet speed', kind: 'pct' },
+  lag: { label: 'phase cooldown', kind: 'pct' },
+  bloat: { label: 'max integrity', kind: 'flat', minus: true },
+};
+const UNSTABLE = [
+  { up: ['dmg', 0.35], down: ['fragile', 0.15] },
+  { up: ['rate', 0.35], down: ['bloat', 20] },
+  { up: ['crit', 0.15], down: ['lag', 0.30] },
+  { up: ['critdmg', 0.8], down: ['traced', 0.15] },
+  { up: ['speed', 0.2], down: ['fragile', 0.10] },
+];
+
 const AFFIX_WEIGHTS = {
   exploit: { dmg: 10, rate: 10, proj: 2, pierce: 4, chain: 3, crit: 6, critdmg: 6, corrupt: 5, throttle: 4, leech: 3, focus: 3 },
   coat: { hp: 10, armor: 10, speed: 5, thorns: 5, leech: 3, phasecd: 4, pickup: 1, data: 1, luck: 1 },
@@ -48,18 +63,18 @@ const AFFIX_WEIGHTS = {
 // rest are decompiled at the terminal for `cost` Data, or unlocked by beating
 // the Agent.
 const ZERO_DAYS = [
-  { id: 'onecoat', name: "The One's Coat", slot: 'coat', start: true, power: 'The first lethal hit each floor leaves you at 1 integrity and starts Bullet Time' },
-  { id: 'morpheus', name: "Morpheus' Shades", slot: 'shades', start: true, power: 'Bullet Time lasts twice as long' },
-  { id: 'spoon', name: 'There Is No Spoon', slot: 'implant', start: true, power: 'All your shots bend gently towards their target' },
-  { id: 'redpill', name: 'Red Pill', slot: 'implant', start: true, power: '+40% damage, −25% max integrity' },
-  { id: 'bluepill', name: 'Blue Pill', slot: 'implant', start: true, power: 'Regenerate 1 integrity a second, −15% damage' },
-  { id: 'cookie', name: "Oracle's Cookie", slot: 'implant', start: true, power: 'Heal 25% when a room is cleared' },
-  { id: 'kernel', name: 'Kernel Panic', slot: 'exploit', base: 'logic', cost: 300, power: 'Each blast sets off 3 smaller blasts (40% damage)' },
-  { id: 'loader', name: 'Construct Loader', slot: 'exploit', base: 'packet', cost: 250, power: 'Every 4th shot is a 5-shot cone' },
-  { id: 'trinity', name: "Trinity's Wake", slot: 'implant', cost: 350, power: 'Phasing leaves a trail of glitch that hurts processes' },
-  { id: 'keymaker', name: "Keymaker's Ring", slot: 'implant', cost: 400, power: 'Caches offer one more item and decrypt twice as fast' },
-  { id: 'coil', name: 'Nebuchadnezzar Coil', slot: 'coat', cost: 450, power: 'Below 30% integrity, an EMP hits everything in the room (once per room)' },
-  { id: 'earpiece', name: "Smith's Earpiece", slot: 'shades', cost: 500, power: '+30% crit damage for each elite terminated this run (up to 5)' },
+  { id: 'onecoat', proto: 'ghost', name: "The One's Coat", slot: 'coat', start: true, power: 'The first lethal hit each floor leaves you at 1 integrity and starts Bullet Time' },
+  { id: 'morpheus', proto: 'ghost', name: "Morpheus' Shades", slot: 'shades', start: true, power: 'Bullet Time lasts twice as long' },
+  { id: 'spoon', proto: 'network', name: 'There Is No Spoon', slot: 'implant', start: true, power: 'All your shots bend gently towards their target' },
+  { id: 'redpill', proto: 'kernel', name: 'Red Pill', slot: 'implant', start: true, power: '+40% damage, −25% max integrity' },
+  { id: 'bluepill', proto: 'crypto', name: 'Blue Pill', slot: 'implant', start: true, power: 'Regenerate 1 integrity a second, −15% damage' },
+  { id: 'cookie', proto: 'crypto', name: "Oracle's Cookie", slot: 'implant', start: true, power: 'Heal 25% when a room is cleared' },
+  { id: 'kernel', proto: 'kernel', name: 'Kernel Panic', slot: 'exploit', base: 'logic', cost: 300, power: 'Each blast sets off 3 smaller blasts (40% damage)' },
+  { id: 'loader', proto: 'network', name: 'Construct Loader', slot: 'exploit', base: 'packet', cost: 250, power: 'Every 4th shot is a 5-shot cone' },
+  { id: 'trinity', proto: 'ghost', name: "Trinity's Wake", slot: 'implant', cost: 350, power: 'Phasing leaves a trail of glitch that hurts processes' },
+  { id: 'keymaker', proto: 'crypto', name: "Keymaker's Ring", slot: 'implant', cost: 400, power: 'Caches offer one more item and decrypt twice as fast' },
+  { id: 'coil', proto: 'crypto', name: 'Nebuchadnezzar Coil', slot: 'coat', cost: 450, power: 'Below 30% integrity, an EMP hits everything in the room (once per room)' },
+  { id: 'earpiece', proto: 'kernel', name: "Smith's Earpiece", slot: 'shades', cost: 500, power: '+30% crit damage for each elite terminated this run (up to 5)' },
 ];
 const ZD = Object.fromEntries(ZERO_DAYS.map((z) => [z.id, z]));
 
@@ -138,12 +153,19 @@ function rollItem(rng, opts = {}) {
     delete weights[id];
     item.affixes.push({ id, v: affixValue(id, ilvl, rng) });
   }
+  // now and then a Rare or Epic is Unstable: much stronger, with a catch
+  if (!zd && (rarity === 2 || rarity === 3) && opts.unstable !== false && rng.chance(T.unstable.chance)) {
+    const u = rng.pick(UNSTABLE), k = 1 + T.unstable.ilvlScale * (ilvl - 1);
+    const val = (id, v) => ((AFFIXES[id] || DRAWBACKS[id]).kind === 'flat' ? Math.round(v * k) : Math.round(v * k * 100) / 100);
+    item.unstable = { up: { id: u.up[0], v: val(u.up[0], u.up[1]) }, down: { id: u.down[0], v: val(u.down[0], u.down[1]) } };
+  }
   item.name = itemName(item);
   return item;
 }
 
 function itemName(item) {
   if (item.unique) return ZD[item.unique].name;
+  if (item.unstable) return 'Unstable ' + itemName({ ...item, unstable: null });
   const a = item.affixes;
   if (!a.length) return item.baseName;
   if (a.length === 1) return item.id % 2 ? `${AFFIXES[a[0].id].pre} ${item.baseName}` : `${item.baseName} ${AFFIXES[a[0].id].suf}`;
@@ -151,6 +173,8 @@ function itemName(item) {
 }
 
 function fmtAffix(id, v) {
+  const b = DRAWBACKS[id];
+  if (b) return b.kind === 'flat' ? `−${v} ${b.label}` : `+${Math.round(v * 100)}% ${b.label}`;
   const a = AFFIXES[id];
   if (a.kind === 'int') return `+${v} ${a.label}`;
   if (a.kind === 'flat') return `+${v} ${a.label}`;
@@ -173,7 +197,7 @@ function baseStats() {
   return {
     maxHp: T.player.hp, armor: 0, speed: 0, dmg: 0, rate: 0, proj: 0, pierce: 0, chain: 0,
     crit: 0.05, critdmg: 0, leech: 0, corrupt: 0, throttle: 0, phasecd: [], focus: 0, pickup: 0,
-    thorns: 0, data: 0, luck: 0, hpMult: 1,
+    thorns: 0, data: 0, luck: 0, hpMult: 1, dmgTaken: 0, packetSpeed: 0,
     powers: {}, // Zero-Day and patch powers by id
     weapon: null,
   };
@@ -181,6 +205,10 @@ function baseStats() {
 
 function addAffix(s, id, v) {
   if (id === 'hp') s.maxHp += v;
+  else if (id === 'fragile') s.dmgTaken += v;
+  else if (id === 'traced') s.packetSpeed += v;
+  else if (id === 'lag') s.phasecd.push(-v);
+  else if (id === 'bloat') s.maxHp -= v;
   else if (id === 'phasecd') s.phasecd.push(v);
   else s[id] += v;
 }
@@ -192,13 +220,17 @@ function computeStats(gear, patches, floorN = 1) {
     if (!it) continue;
     for (const a of it.implicit) addAffix(s, a.id, a.v);
     for (const a of it.affixes) addAffix(s, a.id, a.v);
+    if (it.unstable) { addAffix(s, it.unstable.up.id, it.unstable.up.v); addAffix(s, it.unstable.down.id, it.unstable.down.v); }
     if (it.unique) s.powers[it.unique] = true;
   }
   for (const p of patches) applyPatch(s, p);
+  applyProtocols(s, protocolCounts(gear, patches));
   // the Oracle's pills
   const pill = Game.run && Game.run.pill;
   if (pill === 'red') { s.dmg += 0.15; s.maxHp -= 15; }
   if (pill === 'blue') s.maxHp += 20;
+  // the Backdoor's price
+  const cut = (Game.run && Game.run.hpCut) || 0;
   // permanent upgrades and the depth
   s.maxHp += 8 * Save.rank('hp');
   s.dmg += 0.05 * Save.rank('dmg');
@@ -208,9 +240,12 @@ function computeStats(gear, patches, floorN = 1) {
   const depth = (Game.run && Game.run.depth) || 1;
   s.luck += T.depth.luck * (depth - 1);
   s.data += T.depth.data * (depth - 1);
+  // countermeasures pay in Data
+  for (const id of (Game.run && Game.run.counter) || []) { const c = T.counter.find((x) => x.id === id); if (c) s.data += c.data; }
   // Zero-Day powers that are plain numbers
   if (s.powers.redpill) { s.dmg += 0.4; s.maxHp = Math.round(s.maxHp * 0.75); }
   if (s.powers.bluepill) s.dmg -= 0.15;
+  if (cut) s.maxHp = Math.round(s.maxHp * (1 - cut));
   if (s.powers.earpiece) s.critdmg += 0.3 * Math.min(5, (Game.run && Game.run.eliteKills) || 0);
   // caps
   const C = T.caps;
@@ -266,7 +301,7 @@ function compareVerdict(gear, patches, item, floorN) {
     const a = estimateDps(now), b = estimateDps(next), d = a > 0 ? (b - a) / a : 1;
     return { text: `DPS ${Math.round(a)} → ${Math.round(b)}`, delta: d, kind: verdictKind(d, filled), parts: [['DPS', a, b]] };
   }
-  const ehp = (s) => s.maxHp / (1 - s.armor);
+  const ehp = (s) => s.maxHp / (1 - s.armor) / (1 + s.dmgTaken);
   const offence = (s) => estimateDps(s);
   const da = ehp(now), db = ehp(next), oa = offence(now), ob = offence(next);
   const d = ((db - da) / da) * 0.5 + ((ob - oa) / Math.max(1, oa)) * 0.5;

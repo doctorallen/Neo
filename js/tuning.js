@@ -12,9 +12,9 @@ const T = {
   // many processes may be alive at once in a wave.
   floors: [
     { sector: 'tenement', combat: 1, largeChance: 0, cache: true, oracle: 0.4, rabbit: 0.25, alive: 4 },
-    { sector: 'server', combat: 2, largeChance: 0.2, cache: true, oracle: 0.4, rabbit: 0.25, alive: 5 },
-    { sector: 'subway', combat: 2, largeChance: 0.3, cache: true, oracle: 0.4, rabbit: 0.25, alive: 6 },
-    { sector: 'grid', combat: 2, largeChance: 0.35, cache: true, oracle: 0.4, rabbit: 0.25, alive: 6 },
+    { sector: 'server', combat: 2, largeChance: 0.2, cache: true, oracle: 0.4, rabbit: 0.25, backdoor: 0.8, alive: 5 },
+    { sector: 'subway', combat: 2, largeChance: 0.3, cache: true, oracle: 0.4, rabbit: 0.25, backdoor: 0.8, alive: 6 },
+    { sector: 'grid', combat: 2, largeChance: 0.35, cache: true, oracle: 0.4, rabbit: 0.25, backdoor: 0.8, alive: 6 },
     { sector: 'core', combat: 0, largeChance: 0, cache: false, oracle: 0, rabbit: 0, alive: 6 },
   ],
 
@@ -52,8 +52,8 @@ const T = {
   },
 
   // Enemy scaling by floor (n from 1) and depth (d from 1).
-  enemyHp: (n, d) => (1 + 0.35 * (n - 1)) * (1 + T.depth.hp * (d - 1)),
-  enemyDmg: (n, d) => 1.1 * (1 + 0.3 * (n - 1)) * (1 + T.depth.dmg * (d - 1)),
+  enemyHp: (n, d) => (1 + 0.45 * (n - 1)) * (1 + T.depth.hp * (d - 1)),
+  enemyDmg: (n, d) => 1.1 * (1 + 0.4 * (n - 1)) * (1 + T.depth.dmg * (d - 1)),
 
   enemyBullet: { radius: 2, maxAlive: 18, maxAliveBoss: 30 },
   spawnTelegraph: 0.6, spawnGrace: 1.0, spawnMinDist: 56,
@@ -89,6 +89,11 @@ const T = {
 
   failsafe: { idle: 20 },
 
+  // the Backdoor, an optional side room on sectors 2-4: a honeypot (a fight
+  // with two elites and an Epic-or-better prize) or an open port (a patch now
+  // for a cut to max integrity for the rest of the run)
+  backdoor: { budget: 0.8, elites: 2, prizeMin: 3, prizeData: 20, hpCut: 0.15, hpCutMax: 0.45 },
+
   // Loot. Rarity tiers 0–4: Common, Uncommon, Rare, Epic, Zero-Day.
   rarity: {
     names: ['Common', 'Uncommon', 'Rare', 'Epic', 'Zero-Day'],
@@ -122,4 +127,18 @@ const T = {
 
   // each Depth past the first: processes tougher and harder-hitting, loot rarer, more Data
   depth: { max: 5, hp: 0.4, dmg: 0.25, luck: 0.15, data: 0.2 },
+
+  // Countermeasures, switched on at the terminal once you've won: each makes
+  // runs harder in its own way and adds to the Data you earn. Never in the
+  // Daily Trace.
+  counter: [
+    { id: 'adaptive', name: 'Adaptive Agents', desc: 'Agents dodge twice as often', data: 0.2 },
+    { id: 'strictgc', name: 'Strict GC', desc: 'No integrity orbs drop', data: 0.25 },
+    { id: 'fastpackets', name: 'Packet Acceleration', desc: 'Enemy packets fly 20% faster', data: 0.25 },
+    { id: 'hardened', name: 'Hardened Processes', desc: 'Elites turn up twice as often', data: 0.2 },
+    { id: 'encrypted', name: 'Encrypted Caches', desc: 'Caches offer one item fewer', data: 0.15 },
+  ],
+
+  // Unstable items: some Rares and Epics carry a big upside and a drawback
+  unstable: { chance: 0.15, ilvlScale: 0.1 },
 };

@@ -42,7 +42,7 @@ for (const [size, set] of Object.entries(N.ROOM_TEMPLATES)) {
 
 // 2. floors
 const seeds = 500;
-let roomsSeen = 0, rabbits = 0, oracles = 0;
+let roomsSeen = 0, rabbits = 0, oracles = 0, honeypots = 0, ports = 0;
 for (let s = 1; s <= seeds; s++) {
   const seed = N.hashInts(s, 77);
   for (let n = 1; n <= 5; n++) {
@@ -61,6 +61,15 @@ for (let s = 1; s <= seeds; s++) {
     if (n === 5 && !f.entry.props.some((p) => p.kind === 'cache')) failures.push(`${where}: no cache before the Agent`);
     if (f.entry.doors.s) failures.push(`${where}: the entry room has a south door`);
     rabbits += count('rabbit'); oracles += count('oracle');
+    // the backdoor: at most one, only on sectors 2-4, a known variant, off a fight, its terminal in place
+    if (count('backdoor') > (recipe.backdoor ? 1 : 0)) failures.push(`${where}: ${count('backdoor')} backdoors`);
+    for (const b of f.rooms.filter((r) => r.kind === 'backdoor')) {
+      if (b.variant === 'honeypot') honeypots++; else if (b.variant === 'port') ports++; else failures.push(`${where}: a backdoor of kind ${b.variant}`);
+      if (b.variant === 'port' && !b.props.some((p) => p.kind === 'backdoor')) failures.push(`${where}: an open port with no terminal`);
+      if (b.cleared !== (b.variant === 'port')) failures.push(`${where}: a ${b.variant} that starts ${b.cleared ? 'cleared' : 'sealed'}`);
+      const host = Object.values(b.doors)[0].to;
+      if (host.kind !== 'combat' || Object.values(b.doors).length !== 1 || Object.values(b.doors)[0].hidden) failures.push(`${where}: a backdoor that isn't a dead end off a fight`);
+    }
     // doors agree and match the grid
     for (const r of f.rooms) {
       for (const [d, link] of Object.entries(r.doors)) {
@@ -99,5 +108,6 @@ if (update || !fs.existsSync(GOLDEN)) {
   for (const seed of Object.keys(golden)) if (JSON.stringify(want[seed]) !== JSON.stringify(golden[seed])) failures.push(`golden hashes changed for seed ${seed} (re-record with npm run gen:update if meant)`);
 }
 
-console.log(`gen: ${combos} template combinations, ${seeds * 5} floors, ${roomsSeen} rooms (${rabbits} rabbit rooms, ${oracles} oracles)`);
+console.log(`gen: ${combos} template combinations, ${seeds * 5} floors, ${roomsSeen} rooms (${rabbits} rabbit rooms, ${oracles} oracles, ${honeypots} honeypots, ${ports} open ports)`);
+if (honeypots < 100 || ports < 100) failures.push(`too few backdoors: ${honeypots} honeypots, ${ports} open ports`);
 finish('gen', failures);

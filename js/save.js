@@ -26,6 +26,8 @@ function defaultSave() {
     meta: {
       data: 0, upgrades: {}, unlocks: {}, zeroDays: {}, depth: 1, maxDepth: 1, introSeen: false, tutorialDone: false,
       reached2: false, hints: {}, lastWin: false,
+      tx: 0, txRead: 0, // transmissions unlocked, and read
+      counter: {}, // countermeasures switched on at the terminal
     },
     records: {
       runs: 0, wins: 0, kills: 0, bestTime: 0, deepest: 0, legendaries: 0, bestDepthWin: 0,

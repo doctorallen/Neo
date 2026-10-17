@@ -71,6 +71,8 @@
     <div id="loadout-items" class="loadout-items"></div>
     <h3>PATCHES</h3>
     <div id="loadout-patches" class="chips"></div>
+    <h3>PROTOCOLS</h3>
+    <div id="loadout-protocols" class="protocols"></div>
     <h3>STATS</h3>
     <div id="loadout-stats" class="stats-table"></div>
     <div class="menu"><button class="btn" data-back>BACK</button></div>
@@ -87,6 +89,7 @@
     <div class="balance">DATA <span id="up-data">0</span></div>
     <div id="up-list" class="up-list"></div>
     <div id="up-depth" class="up-depth"></div>
+    <div id="up-counter" class="up-list"></div>
     <div id="up-zd" class="up-list"></div>
     <div class="menu"><button class="btn" data-back>LOG OUT</button></div>
   </section>
@@ -96,6 +99,8 @@
     <div id="records-stats" class="stats-table"></div>
     <h3>ZERO-DAYS</h3>
     <div id="records-codex" class="codex"></div>
+    <h3>TRANSMISSIONS</h3>
+    <div id="records-tx" class="tx-list"></div>
     <div class="menu"><button class="btn" data-back>BACK</button></div>
   </section>
 
@@ -123,8 +128,9 @@
   <section id="screen-summary" class="screen panel scroll" hidden>
     <h2 id="sum-title">CONNECTION LOST</h2>
     <div id="sum-lines" class="sum-lines"></div>
+    <div id="sum-trace" class="sum-trace" hidden></div>
     <div id="sum-unlocks" class="sum-unlocks"></div>
-    <div class="menu"><button id="sum-wake" class="btn primary" hidden>&gt; wake up</button></div>
+    <div class="menu"><button id="sum-share" class="btn" hidden>SHARE RESULT</button><button id="sum-wake" class="btn primary" hidden>&gt; wake up</button></div>
   </section>
 
   <section id="screen-confirm" class="screen panel" hidden>

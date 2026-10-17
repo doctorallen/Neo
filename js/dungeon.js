@@ -186,7 +186,7 @@ function generateFloor(seed, n) {
 
   // side rooms hang off the main path (never off the exit)
   const hosts = (kinds) => floor.rooms.filter((r) => kinds.includes(r.kind));
-  const attach = (kind, candidates, hidden = false) => {
+  const attach = (kind, candidates, hidden = false, rr = rng) => {
     const spots = [];
     for (const h of candidates)
       for (const d of ['n', 'e', 'w', 's']) {
@@ -195,7 +195,7 @@ function generateFloor(seed, n) {
         if (free(nx, ny)) spots.push([h, d, nx, ny]);
       }
     if (!spots.length) return null;
-    const [h, d, nx, ny] = rng.pick(spots);
+    const [h, d, nx, ny] = rr.pick(spots);
     const r = add(nx, ny, kind, 'small');
     link(h, d, r, hidden);
     return r;
@@ -208,6 +208,14 @@ function generateFloor(seed, n) {
   if (recipe.rabbit && rng.chance(recipe.rabbit)) {
     const r = attach('rabbit', hosts(['combat']), true);
     if (r) r.host = r.doors[Object.keys(r.doors)[0]].to;
+  }
+  // the backdoor, from its own stream so the rooms above stay as they were
+  if (recipe.backdoor) {
+    const brng = new Rng(hashInts(seed, n, 0xbacd));
+    if (brng.chance(recipe.backdoor)) {
+      const r = attach('backdoor', hosts(['combat']), false, brng);
+      if (r) { r.variant = brng.chance(0.5) ? 'honeypot' : 'port'; r.cleared = r.variant !== 'honeypot'; }
+    }
   }
 
   // tiles, props and wall decor for every room
@@ -231,6 +239,7 @@ function furnish(r, rng, floor) {
   };
   if (r.kind === 'cache' || (r.kind === 'entry' && floor.n === T.floors.length)) place('cache', cx, cy);
   if (r.kind === 'oracle') place('oracle', cx, cy - 1);
+  if (r.kind === 'backdoor' && r.variant === 'port') place('backdoor', cx, cy - 1);
   if (r.kind === 'exit') place('phone', cx, cy);
   if (r.kind === 'rabbit') { place('rabbitcache', cx, cy + 1); r.wallDecor.push({ kind: 'window', tx: 3 + rng.i(0, 1) * 4 }); }
   // the north wall: a cracked mirror now and then in the tenement, and
@@ -248,7 +257,7 @@ function floorHash(floor) {
   let h = 0x811c9dc5 | 0;
   const mixIn = (x) => { h = Math.imul(h ^ (x | 0), 0x01000193); };
   for (const r of floor.rooms) {
-    mixIn(r.gx); mixIn(r.gy); mixIn(hashString(r.kind)); mixIn(hashString(r.template));
+    mixIn(r.gx); mixIn(r.gy); mixIn(hashString(r.kind)); mixIn(hashString(r.template)); mixIn(hashString(r.variant || ''));
     for (const v of r.tiles) mixIn(v);
     for (const p of r.props) { mixIn(hashString(p.kind)); mixIn(p.tx); mixIn(p.ty); }
     for (const d of Object.keys(r.doors).sort()) { mixIn(hashString(d)); mixIn(r.doors[d].hidden ? 1 : 0); }
