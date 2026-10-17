@@ -9,6 +9,7 @@
 
 const HINTS = {
   move: { touch: '> drag in the deck to move', keys: '> WASD or arrows to move' },
+  door: { touch: '> drag in the deck: go to the door', keys: '> WASD: go to the door', id: 'move' },
   stop: { touch: '> let go to hack', keys: '> stand still to hack' },
   'phase-hurt': { touch: '> flick, or PHASE, to dodge', keys: '> SPACE to phase through attacks', btn: 'btn-phase', id: 'phase' },
   focus: { touch: '> FOCUS is ready: tap it', keys: '> SHIFT for bullet time', btn: 'btn-focus' },
@@ -25,7 +26,7 @@ const UI = {
     $('build').textContent = typeof BUILD_INFO !== 'undefined' ? BUILD_INFO : '';
     $('btn-pause').addEventListener('click', () => { Sound.play('ui_tap'); this.openPause(); });
     $('btn-act').addEventListener('pointerdown', (ev) => { ev.preventDefault(); ev.stopPropagation(); if (Input.blocked()) return; Sound.play('ui_tap'); this.openUpgrades(); });
-    for (const el of document.querySelectorAll('[data-back]')) el.addEventListener('click', () => { Sound.play('ui_back'); this.back(); });
+    for (const el of document.querySelectorAll('[data-back]')) el.addEventListener('click', () => { if (this.guarded(el)) return; Sound.play('ui_back'); this.back(); });
     $('crt-skip').addEventListener('click', (ev) => { ev.stopPropagation(); hubTap(); });
     $('screen-crt').addEventListener('pointerdown', () => hubTap());
     $('stage').addEventListener('pointerdown', () => { if (Game.scene === 'hub' && Game.hub && Game.hub.i < Game.hub.script.length) hubTap(); });
@@ -36,6 +37,7 @@ const UI = {
   show(id, { modal = true, keep = false } = {}) {
     if (this.screen) $(this.screen).hidden = true;
     if (this.screen && keep) this.stack.push(this.screen);
+    if (id) $('screen-crt').hidden = true;
     this.screen = id;
     if (id) $(id).hidden = false;
     Game.modal = id && modal ? id : null;
@@ -204,7 +206,7 @@ const UI = {
     lines.push(`<div class="rar" style="color:${col}">${T.rarity.names[it.rarity].toUpperCase()}</div>`);
     lines.push(`<div class="name" style="color:${col}">${escapeHtml(it.name)}</div>`);
     lines.push(`<div class="slot">${SLOT_NAMES[it.slot]}${it.slot === 'exploit' ? ' · ' + T.exploits[it.base].name : ''} · level ${it.ilvl}</div>`);
-    if (it.slot === 'exploit') { const E = T.exploits[it.base]; lines.push(`<div class="line implicit">${Math.round(exploitDamage(it.base, it.ilvl))} damage × ${E.rate.toFixed(1)}/s · ${exploitPatternText(it.base)}</div>`); }
+    if (it.slot === 'exploit') { const E = T.exploits[it.base]; lines.push(`<div class="line implicit">base ${Math.round(exploitDamage(it.base, it.ilvl))} damage × ${E.rate.toFixed(1)}/s · ${exploitPatternText(it.base)}</div>`); }
     for (const a of it.implicit) lines.push(`<div class="line implicit">${fmtAffix(a.id, a.v)}</div>`);
     for (const a of it.affixes) lines.push(`<div class="line">${fmtAffix(a.id, a.v)}</div>`);
     if (it.unique) lines.push(`<div class="power">${escapeHtml(ZD[it.unique].power)}</div>`);
@@ -313,6 +315,7 @@ const UI = {
     const unl = [...run.newUnlocks];
     if (run.unlockedZeroDay) unl.unshift(`Zero-Day decompiled: ${ZD[run.unlockedZeroDay].name}`);
     $('sum-unlocks').innerHTML = unl.map((u) => '◆ ' + escapeHtml(u)).join('<br>');
+    $('sum-unlocks').hidden = true;
     // the lines arrive one by one; a tap shows them all
     let i = 0;
     const wake = $('sum-wake');
@@ -320,9 +323,9 @@ const UI = {
     const step = () => {
       if (this.screen !== 'screen-summary') return;
       if (i < rows.length) { lines.insertAdjacentHTML('beforeend', `<span class="k">${rows[i][0]}</span><span class="v">${rows[i][1]}</span>`); i++; Sound.play('key'); this.sumTimer = setTimeout(step, 180); }
-      else wake.hidden = false;
+      else { wake.hidden = false; $('sum-unlocks').hidden = false; }
     };
-    $('screen-summary').onpointerdown = () => { if (i < rows.length) { clearTimeout(this.sumTimer); while (i < rows.length) { lines.insertAdjacentHTML('beforeend', `<span class="k">${rows[i][0]}</span><span class="v">${rows[i][1]}</span>`); i++; } wake.hidden = false; this.guardButtons('screen-summary'); } };
+    $('screen-summary').onpointerdown = () => { if (i < rows.length) { clearTimeout(this.sumTimer); while (i < rows.length) { lines.insertAdjacentHTML('beforeend', `<span class="k">${rows[i][0]}</span><span class="v">${rows[i][1]}</span>`); i++; } wake.hidden = false; $('sum-unlocks').hidden = false; this.guardButtons('screen-summary'); } };
     wake.onclick = () => { if (this.guarded(wake)) return; Sound.play('ui_tap'); this.hide(); enterHub({ won }); };
     this.show('screen-summary');
     setTimeout(step, 450);
@@ -445,7 +448,8 @@ const UI = {
     const names = ['OFF', 'COMMON', 'UNCOMMON'];
     box.appendChild(this.button(`<span>Auto-scrap</span><span class="val">${names[S.autoScrap]}</span>`, () => { S.autoScrap = (S.autoScrap + 1) % 3; Save.write(); this.buildSettings(); }, 'setting'));
     box.appendChild(this.button('<span>Show hints again</span><span class="val">↺</span>', () => { Save.meta.hints = {}; Save.write(); this.toast('HINTS RESET', 1); }, 'setting'));
-    // reset: hold to confirm
+    // reset: hold to confirm (not in the middle of a run)
+    if (Game.scene === 'run') return;
     const hold = document.createElement('button');
     hold.className = 'setting hold';
     hold.innerHTML = '<div class="fill"></div><span>Hold to reset all progress</span>';
@@ -473,6 +477,7 @@ const UI = {
   onFloorStart(n, resumed) {
     $('app').classList.remove('hub-mode');
     $('btn-act').hidden = true;
+    this.feedLines = [];
     this.feed(`> sector ${n}: ${T.floors[n - 1].sector}${resumed ? ' (restored)' : ''}`);
     if (n === 5) this.feed('> core reached');
     this.banner(n === 5 ? 'CORE' : `SECTOR ${n}`);
@@ -546,6 +551,8 @@ const UI = {
   },
   bossLine(text) { this.banner(`"${text}"`, 'boss'); this.feed(`> agent: ${text}`); },
   toast(text, rarity = 0) {
+    this.feed('> ' + text.toLowerCase());
+    if (rarity < 3) return;
     const box = $('toasts');
     const d = document.createElement('div');
     d.className = 'toast';

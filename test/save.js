@@ -56,6 +56,42 @@ const ready = (page) => page.waitForFunction(() => typeof Game !== 'undefined' &
     await page.close();
   }
 
+  // the checkpoint is a snapshot: gear equipped later in the floor stays out
+  // of it, the Oracle's pill stays in, and Data banked when the page closed
+  // mid-floor isn't banked again on the replay
+  {
+    const { page, errors } = await openGame(browser, {});
+    const r = await page.evaluate(() => {
+      UI.hide(); stopRain(); Save.meta.introSeen = true;
+      startRun({ seed: 777 });
+      const startGear = JSON.stringify(Game.run.gear);
+      Game.run.pill = 'blue'; writeCheckpoint();
+      equipItem(rollItem(Game.run.rng, { slot: 'coat', ilvl: 1, rarity: 2 }));
+      Game.run.patches.push('sudo');
+      Save.write();
+      const leaked = JSON.stringify(Save.data.checkpoint.gear) !== startGear || Save.data.checkpoint.patches.length !== 0;
+      addData(50); const bank0 = Save.meta.data;
+      saveOnExit(); // the tab closes
+      const bank1 = Save.meta.data;
+      return { leaked, bank0, bank1 };
+    });
+    check(!r.leaked, 'gear or patches taken mid-floor leaked into the checkpoint');
+    check(r.bank1 >= r.bank0 + 49, `closing the page didn't bank the floor's Data (${r.bank0} → ${r.bank1})`);
+    await page.reload(); await ready(page);
+    const r2 = await page.evaluate(() => {
+      const bank = Save.meta.data;
+      continueRun();
+      const s = { coat: Game.run.gear.coat, patches: Game.run.patches.length, maxHp: Game.run.stats.maxHp };
+      addData(50); commitData();
+      return { ...s, gained: Save.meta.data - bank };
+    });
+    check(r2.coat === null && r2.patches === 0, 'Continue brought back gear taken after the checkpoint');
+    check(r2.maxHp === 120, `the blue pill was lost on Continue (max integrity ${r2.maxHp})`);
+    check(r2.gained <= 1, `the floor's Data was banked twice after a reload (${r2.gained} more)`);
+    for (const e of errors) failures.push('snapshot: page error: ' + e);
+    await page.close();
+  }
+
   // broken saves
   for (const [label, raw] of [['garbage', '{not json'], ['wrong types', JSON.stringify({ settings: { music: 'loud', leftHanded: 'yes', autoScrap: null }, meta: { data: 'lots', upgrades: 5 }, records: { runs: -1 }, checkpoint: { seed: 'x' } })], ['empty object', '{}'], ['null', 'null']]) {
     const page = await browser.newPage();

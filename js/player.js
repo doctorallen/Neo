@@ -123,7 +123,7 @@ function phaseContacts(p, s) {
     if (b.dead) continue;
     if (dist2(b.x, b.y, p.x, p.y - 4) < 81) {
       b.dead = true;
-      run.focus = Math.min(T.focus.max, run.focus + T.player.phaseBulletFocus);
+      if (!Game.bt) run.focus = Math.min(T.focus.max, run.focus + T.player.phaseBulletFocus);
       spawnBits(b.x, b.y, '#ff4060', 4);
       if (!p.phaseDropped) { p.phaseDropped = true; Sound.play('packet_drop'); UI.feed('> packet dropped'); }
     }
@@ -163,6 +163,13 @@ function startBulletTime(free) {
   buzz(30);
   UI.hintDone('focus');
   UI.feed('> bullet time');
+}
+
+// Ends Bullet Time at once (a new floor, death, the end of a run), sound and all.
+function endBulletTime() {
+  if (Game.bt) Sound.setBulletTime(false);
+  Game.bt = null;
+  Game.timeScale = 1;
 }
 
 function updateBulletTime(dtReal) {
@@ -307,8 +314,7 @@ function healPlayer(n, show = true) {
 function playerDies() {
   if (Game.flow) return;
   Game.flow = { kind: 'death', t: 0 };
-  Game.bt = null; Game.timeScale = 1;
-  Sound.setBulletTime(false);
+  endBulletTime();
   Sound.play('death');
   Sound.heartbeat(false);
   Game.glitch = 1;

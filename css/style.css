@@ -37,7 +37,7 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 
 /* ---- the top bar ---- */
 #topbar {
-  flex: 0 0 auto; height: calc(40px + var(--safe-t)); padding: var(--safe-t) 6px 0 8px;
+  flex: 0 0 auto; height: calc(48px + var(--safe-t)); padding: var(--safe-t) 4px 0 8px;
   display: flex; align-items: center; gap: 8px; font-size: 20px; line-height: 1;
   background: linear-gradient(#020a05, #010302); border-bottom: 1px solid #0c2a16;
 }
@@ -50,7 +50,7 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .hud-data { color: var(--gold); white-space: nowrap; }
 .data-glyph { font-size: 14px; margin-right: 2px; }
 .icon-btn {
-  width: 48px; height: 40px; flex: 0 0 48px; background: transparent; border: 1px solid #1d4a2a; border-radius: 6px;
+  width: 48px; height: 48px; flex: 0 0 48px; background: transparent; border: 1px solid #1d4a2a; border-radius: 6px;
   font-size: 22px; color: var(--ink); letter-spacing: -2px;
 }
 
@@ -149,7 +149,7 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .skip { position: absolute; right: 12px; bottom: calc(16px + var(--safe-b)); min-width: 96px; min-height: 48px; font-size: 22px; background: transparent; border: 1px solid #1d4a2a; color: var(--dim); }
 
 /* ---- cards ---- */
-.card-screen { background: rgba(0, 4, 2, 0.9); }
+.card-screen { background: rgba(0, 4, 2, 0.97); }
 .card-title { margin-top: 0; }
 .card-sub { margin: 0 0 10px; color: var(--dim); font-size: 20px; }
 .card { width: min(360px, 100%); padding: 14px 14px 10px; border: 2px solid currentColor; background: #020c06; text-align: left; box-shadow: 0 0 24px rgba(0, 0, 0, 0.9); }
@@ -210,8 +210,8 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .codex { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: min(380px, 100%); font-size: 18px; }
 .codex div { padding: 6px; border: 1px solid #0f3a1c; text-align: left; }
 .codex .found { color: var(--gold); border-color: #5a4010; }
-.sum-lines { width: min(360px, 100%); font-size: 23px; text-align: left; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; margin-bottom: 8px; }
-.sum-lines .k { color: var(--dim); }
+.sum-lines { width: min(360px, 100%); font-size: 23px; text-align: left; display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin-bottom: 8px; }
+.sum-lines .k { color: var(--dim); white-space: nowrap; }
 .sum-lines .v { text-align: right; }
 .sum-unlocks { color: var(--gold); font-size: 21px; margin: 6px 0 10px; line-height: 1.2; }
 .confirm-text { font-size: 22px; color: var(--dim); max-width: 340px; }
@@ -228,3 +228,11 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .rotate { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: #000; color: var(--green); font-size: 30px; text-align: center; }
 .rotate span { font-size: 20px; color: var(--dim); }
 @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) { .rotate { display: flex; } }
+
+/* long screens: the way out stays in reach while the list scrolls */
+.screen.scroll > .menu:last-child, #cache-options > .btn:last-child {
+  position: sticky; bottom: calc(-16px - var(--safe-b)); padding: 10px 0 calc(12px + var(--safe-b));
+  background: linear-gradient(rgba(1, 8, 4, 0), rgba(1, 8, 4, 0.98) 30%); z-index: 2;
+}
+#cache-options > .btn:last-child { width: 100%; margin: 0; }
+.title .btn { background: rgba(2, 12, 6, 0.92); }

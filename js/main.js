@@ -12,7 +12,7 @@ let _acc = 0, _last = 0, _resizeT = 0;
 function step(dtReal) {
   Game.realT += dtReal;
   Input.update();
-  if (Game.transition) {
+  if (Game.transition && !Game.modal && !Game.paused) {
     const tr = Game.transition;
     tr.t += dtReal;
     if (!tr.done && tr.t >= tr.dur / 2) { tr.done = true; tr.then(); }
@@ -132,7 +132,7 @@ function boot() {
     Sound.setHidden(document.hidden);
     if (document.hidden && !Game.modal && (Game.scene === 'run' || Game.scene === 'hub') && !Game.flow) UI.openPause();
   });
-  window.addEventListener('pagehide', () => { if (Game.run && !Game.run.ended) { commitData(); Save.write(); } });
+  window.addEventListener('pagehide', saveOnExit);
   // the back gesture pauses instead of leaving
   try {
     history.pushState({ neo: 1 }, '');

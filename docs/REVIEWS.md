@@ -160,3 +160,34 @@ Four agents reviewed the plan before any game code was written. This file record
   - Kernel Panic's mini-blasts do 40%.
   - Corrupt pools are capped at 80%.
   - The Oracle's "Déjà vu" event is renamed *Glitch*.
+
+## 5. Code review and QA playtest (after the build)
+
+Two more agents reviewed the finished game: one read every file looking for bugs, and one played it headlessly as a QA tester across six screen sizes, every menu and whole runs. Everything they confirmed was fixed, with regression tests for the serious ones:
+
+- **Checkpoints:**
+  - The checkpoint shared gear and patches with the live run, so Continue could bring back items taken later in the floor. It's now a true snapshot.
+  - Closing the page mid-floor and pressing Continue banked that floor's Data twice. Now the amount banked is recorded.
+  - The Oracle's pills, the spoon and the extra patch choice were lost on Continue. They're saved now.
+- **Pausing:**
+  - Pausing during the cold open (an app switch, the back gesture, turning the phone) hid the pause menu under the monitor's text, which locked the game on a phone.
+  - Pausing during a room or door transition let the transition carry on underneath.
+- **Bullet Time:**
+  - Phasing through packets refilled focus during Bullet Time.
+  - Answering the phone during Bullet Time left the music muffled on the next floor.
+- **Caps and carry-over:**
+  - Pierce and chain could pass their caps through the exploit's own value.
+  - All slows together could pass the boss's slow cap.
+  - Input pressed in the apartment fired on arrival in the dungeon.
+  - The Agent's bar followed you home after dying in the core.
+- **Smaller:**
+  - Tapping to hurry the monitor's typing made it slower.
+  - Split worms could hurt before their full second of grace.
+  - BACK buttons ignored the tap guard.
+- **UX:**
+  - Neo now wakes a step from the desk, and the first hint points at the door. The terminal only offers itself once you have Data.
+  - Long screens keep their BACK button in reach.
+  - Routine loot news goes to the terminal feed instead of toasts over the room.
+  - The summary's labels no longer wrap, and the compare card says "base" damage.
+  - Reset progress is hidden mid-run.
+  - The pause button is a full 48 px.

@@ -240,7 +240,7 @@ function computeStats(gear, patches, floorN = 1) {
     dmg: exploitDamage(ex.base, ex.ilvl) * (1 + s.dmg),
     rate: E.rate * (1 + s.rate),
     shots: (E.shots || 1), spread: E.spread || 0,
-    pierce: (E.pierce || 0) + s.pierce, chain: (E.chain || 0) + s.chain, chainRange: E.chainRange || 60,
+    pierce: Math.min(C.pierce, (E.pierce || 0) + s.pierce), chain: Math.min(C.chain, (E.chain || 0) + s.chain), chainRange: E.chainRange || 60,
     radius: E.radius || 0,
   };
   return s;

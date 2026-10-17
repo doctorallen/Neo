@@ -51,6 +51,13 @@ async function phone(browser) {
   const typed = await page.evaluate(() => document.getElementById('crt-line').textContent);
   check(/Wake up/.test(typed), `phone: the monitor says "${typed}"`);
   await shot(page, 'smoke-crt');
+  // pausing mid-scene (a call, the back gesture, II): the pause shows over the monitor and the scene picks up after
+  await page.evaluate(() => UI.openPause());
+  const onTop = await page.evaluate(() => { const r = document.querySelector('#pause-menu .btn.primary').getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!el.closest('#screen-pause'); });
+  check(onTop, 'phone: the pause menu is hidden under the monitor during the cold open');
+  await tap(page, '#pause-menu .btn.primary');
+  await run(page, 0.5);
+  check(await visible(page, 'screen-crt'), 'phone: the monitor did not come back after resuming');
   await run(page, 14);
   check(await page.evaluate(() => Game.hub && Game.hub.i >= Game.hub.script.length && !Game.player.hidden), 'phone: Neo never woke at the desk');
   check(!(await visible(page, 'screen-crt')), 'phone: the monitor overlay stayed up');

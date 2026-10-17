@@ -12,6 +12,7 @@
 
 const HUB_DESK = { tx: 2, ty: 1 }; // the desk's tiles: 2 wide, along the north wall
 const HUB_TERMINAL = { x: 2.5 * TILE, y: 2.9 * TILE }; // where you stand to use it
+const HUB_WAKE = { x: 4.1 * TILE, y: 3.3 * TILE }; // where he stands up, a step from the desk
 
 function buildApartment() {
   const room = new Room(0, 0, 'apartment', 'small');
@@ -36,10 +37,10 @@ function hubScript(full, won) {
   S.push({ k: 'sleep', d: won ? 3.0 : full ? 2.0 : 1.2, rootAccess: won });
   if (full) {
     S.push({ k: 'type', text: 'Wake up, Neo...', hold: 1.2 });
-    S.push({ k: 'stir', d: 0.8 });
+    S.push({ k: 'stir', d: 1.0 });
     S.push({ k: 'type', text: 'The Matrix has you...', hold: 1.2 });
     S.push({ k: 'type', text: 'Follow the white rabbit.', hold: 1.0 });
-    S.push({ k: 'type', text: 'Knock, knock, Neo.', hold: 0.3 });
+    S.push({ k: 'type', text: 'Knock, knock, Neo.', hold: 0.5 });
   } else {
     S.push({ k: 'type', text: 'Wake up, Neo.', hold: 0.5 });
   }
@@ -54,9 +55,10 @@ function enterHub({ won = false } = {}) {
   const room = buildApartment();
   Game.room = room;
   Game.enemies = []; Game.shots = []; Game.bullets = []; Game.hazards = []; Game.drops = []; Game.fx = []; Game.floats = []; Game.critters = [];
+  Game.boss = null; Game.transition = null; endBulletTime();
   Game.player = makePlayer();
   Game.player.coat = false;
-  Game.player.x = HUB_TERMINAL.x; Game.player.y = HUB_TERMINAL.y;
+  Game.player.x = HUB_WAKE.x; Game.player.y = HUB_WAKE.y;
   Game.player.hidden = true; // he's asleep at the desk until the knock
   Game.hub = { room, full, won, script: hubScript(full, won), i: 0, t: 0, typed: '', asleep: true, stir: false, doorOpen: 0, doorShake: 0, knockIdle: 0, knocked: false, leaving: false, crt: false, nearTerminal: false, bulbT: 0, tailT: -1, skip: false };
   Game.flow = null;
@@ -71,7 +73,7 @@ function hubTap() {
   const h = Game.hub;
   if (!h || h.i >= h.script.length) return;
   const step = h.script[h.i];
-  if (step.k === 'type' && h.typed.length < step.text.length) { h.typed = step.text; UI.crt(h.typed, true); h.t = 0; return; }
+  if (step.k === 'type' && h.typed.length < step.text.length) { h.typed = step.text; UI.crt(h.typed, true); h.t = step.text.length / 14; return; }
   if (!h.full || Save.meta.introSeen || h.realT > 3) h.skip = true;
 }
 
@@ -91,6 +93,7 @@ function updateHub(dt) {
     }
     if (step.k === 'stir') {
       h.crt = false; UI.crt(null);
+      Game.player.hidden = true;
       h.stir = true;
       if (h.t >= step.d) { h.stir = false; h.i++; h.t = 0; }
       break;
@@ -110,7 +113,7 @@ function updateHub(dt) {
       Game.player.hidden = false;
       h.skip = false;
       h.i++; h.t = 0;
-      UI.hint('move');
+      UI.hint('door');
       break;
     }
   }
@@ -127,7 +130,7 @@ function updateHub(dt) {
     if (h.knockIdle > 4) { h.knockIdle = 0; knock(h); }
   }
   // the terminal
-  const nearT = dist(p.x, p.y, HUB_TERMINAL.x, HUB_TERMINAL.y) < 18;
+  const nearT = dist(p.x, p.y, HUB_TERMINAL.x, HUB_TERMINAL.y) < 18 && (Save.meta.data > 0 || Object.keys(Save.meta.upgrades).length > 0);
   if (nearT !== h.nearTerminal) { h.nearTerminal = nearT; UI.hubAction(nearT ? 'terminal' : null); }
   // the door opens as he reaches it, onto an empty corridor
   const doorX = 6 * TILE, nearDoor = Math.abs(p.x - doorX) < 20 && p.y < 2.6 * TILE;
@@ -189,7 +192,8 @@ function hubDrawables(ctx, list) {
       if (step && step.k === 'sleep' && step.rootAccess && h.t < 1.2) { ctx.fillStyle = '#b8ffc8'; ctx.fillRect(dx + sc.x + 1, dy + sc.y + 1, sc.w - 2, 1); ctx.fillRect(dx + sc.x + 1, dy + sc.y + 3, Math.max(1, sc.w - 4), 1); }
       else if (Math.floor(t * 2) % 2) { ctx.fillStyle = '#b8ffc8'; ctx.fillRect(dx + sc.x + 1, dy + sc.y + sc.h - 2, 2, 1); }
     }
-    if (h.asleep) blit(ctx, SPR.neo.asleep, deskX + (h.stir ? (Math.floor(t * 10) % 2) : 0), deskY);
+    // stirring: he shifts in his sleep, a pixel this way and that
+    if (h.asleep) blit(ctx, SPR.neo.asleep, deskX + (h.stir ? (Math.floor(t * 6) % 2 ? 1 : -1) : 0), deskY - (h.stir && Math.floor(t * 3) % 2 ? 1 : 0));
   } });
   list.push({ y: 9 * TILE, f: () => blit(ctx, P.bed, 9.5 * TILE, 9 * TILE - 2) });
   list.push({ y: 2 * TILE, f: () => blit(ctx, P.lamp, 4.6 * TILE, 2 * TILE) });

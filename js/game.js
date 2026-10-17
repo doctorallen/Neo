@@ -77,11 +77,16 @@ function continueRun() {
   const c = Save.data.checkpoint;
   if (!c) return false;
   const run = newRun({ seed: c.seed, depth: c.depth || 1, daily: !!c.daily });
+  const copy = (v) => JSON.parse(JSON.stringify(v));
   Object.assign(run, {
-    gear: c.gear, patches: c.patches, hp: c.hp, focus: c.focus || 0, kills: c.kills || 0, eliteKills: c.eliteKills || 0,
-    time: c.time || 0, data: c.data || 0, dataCommitted: c.data || 0, reviveUsed: !!c.reviveUsed, best: c.best || null,
-    roomsCleared: c.roomsCleared || 0,
+    gear: copy(c.gear), patches: copy(c.patches), hp: c.hp, focus: c.focus || 0, kills: c.kills || 0, eliteKills: c.eliteKills || 0,
+    time: c.time || 0, data: c.data || 0, reviveUsed: !!c.reviveUsed, best: c.best || null,
+    roomsCleared: c.roomsCleared || 0, pill: c.pill || null, spoonFloor: c.spoonFloor || 0, extraPick: !!c.extraPick,
+    newUnlocks: Array.isArray(c.newUnlocks) ? c.newUnlocks.slice() : [],
   });
+  // Data already banked (at the checkpoint, or when the page was closed
+  // mid-floor) isn't banked again as the floor is replayed
+  run.dataCommitted = Math.max(Math.floor(run.data), Math.floor(c.banked || 0));
   for (const k of SLOTS) if (run.gear[k] === undefined) run.gear[k] = null;
   Game.run = run;
   run.stats = computeStats(run.gear, run.patches, c.floor);
@@ -93,11 +98,24 @@ function continueRun() {
 function writeCheckpoint() {
   const r = Game.run;
   commitData();
+  // copies, so nothing that happens later in the floor leaks into the checkpoint
+  const copy = (v) => JSON.parse(JSON.stringify(v));
   Save.data.checkpoint = {
-    seed: r.seed, floor: r.floorN, depth: r.depth, daily: r.daily, gear: r.gear, patches: r.patches,
-    hp: r.hp, focus: r.focus, kills: r.kills, eliteKills: r.eliteKills, time: r.time, data: r.data,
-    reviveUsed: r.reviveUsed, best: r.best, roomsCleared: r.roomsCleared,
+    seed: r.seed, floor: r.floorN, depth: r.depth, daily: r.daily, gear: copy(r.gear), patches: copy(r.patches),
+    hp: r.hp, focus: r.focus, kills: r.kills, eliteKills: r.eliteKills, time: r.time, data: r.data, banked: r.dataCommitted,
+    reviveUsed: r.reviveUsed, best: copy(r.best), roomsCleared: r.roomsCleared, pill: r.pill || null,
+    spoonFloor: r.spoonFloor || 0, extraPick: !!r.extraPick, newUnlocks: r.newUnlocks.slice(),
   };
+  Save.write();
+}
+
+// The page is going away mid-floor: bank what's been earned and note it, so
+// Continue doesn't bank it a second time.
+function saveOnExit() {
+  const r = Game.run;
+  if (!r || r.ended) return;
+  commitData();
+  if (Save.data.checkpoint) Save.data.checkpoint.banked = r.dataCommitted;
   Save.write();
 }
 
@@ -142,7 +160,9 @@ function startFloor(n, { resumed = false } = {}) {
   Game.scene = 'run';
   Game.player = makePlayer();
   Game.player.coat = true;
-  Game.bt = null; Game.timeScale = 1;
+  endBulletTime();
+  // nothing pressed in the apartment or on the last floor carries over
+  Input.phaseReq = null; Input.focusReq = false;
   enterRoom(r.floor.entry, null);
   Sound.music(n === 5 ? 'none' : 'floor' + n);
   UI.onFloorStart(n, resumed);
@@ -173,7 +193,7 @@ function enterRoom(room, from) {
   else Sound.setTension(0);
   if (firstVisit && room.cat) spawnCat(room);
   if (firstVisit && room.kind === 'cache') UI.hint('decrypt');
-  if (firstVisit && room.kind === 'oracle') UI.feed('> terminal found. someone left cookies.');
+  if (firstVisit && room.kind === 'oracle') UI.feed('> terminal found. cookies?');
   UI.onRoomChange();
 }
 
@@ -295,7 +315,7 @@ function endRun(victory) {
   Save.meta.lastWin = victory;
   Save.write();
   Game.enemies = []; Game.bullets = []; Game.hazards = []; Game.shots = [];
-  Game.bt = null; Game.timeScale = 1;
+  endBulletTime();
   Sound.setBulletTime(false); Sound.heartbeat(false); Sound.setTension(0);
   UI.openSummary(r);
 }

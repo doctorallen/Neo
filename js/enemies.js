@@ -183,6 +183,8 @@ function updateEnemies(dt) {
     }
     let slow = slowAll;
     if (e.slowT > 0) { e.slowT -= dt; slow *= e.isBoss ? 1 - T.caps.slow / 2 : 1 - T.caps.slow * 0.8; }
+    // all slows together never pass the cap (half of it on bosses)
+    slow = Math.max(slow, 1 - (e.isBoss ? T.caps.slow / 2 : T.caps.slow));
     const edt = dt * e.rate; // attack timers run faster when overclocked
     const canAttack = e.graceT <= 0 && onScreen(e.x, e.y - e.h / 2, -2) && !Game.flow;
     const mdt = dt * slow;
@@ -432,7 +434,7 @@ function killEnemy(e) {
   if (e.type === 'worm' && !e.small) {
     for (let i = 0; i < 2; i++) {
       const c = makeEnemy('worm', e.x + (i ? 5 : -5), e.y, { instant: true, small: true, hp: T.enemies.worm.splitHp, wave: e.wave });
-      c.graceT = 0.6;
+      c.graceT = T.spawnGrace;
       Game.enemies.push(c);
       if (room.fight) room.fight.waveCount++;
     }
