@@ -1,7 +1,7 @@
 'use strict';
 // ---------------------------------------------------------------------------
 // Controls, twin-stick. On a phone: two floating sticks in the control deck
-// (never on the room view). The move stick appears wherever the left thumb
+// (never on the room view; held sideways, the deck is both sides of it). The move stick appears wherever the left thumb
 // lands, and a quick flick of it Phases. The aim stick appears under the
 // right thumb, and holding it hacks: drag to aim (with aim assist), or just
 // hold to fire at the nearest process. Left-handed swaps the sides. FOCUS
@@ -241,7 +241,7 @@ function setupInput() {
 
   // no pinch zoom, no page drag, no long-press menus on the game
   document.addEventListener('gesturestart', (ev) => ev.preventDefault());
-  document.addEventListener('touchmove', (ev) => { if (!ev.target.closest || !ev.target.closest('.scroll')) ev.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', (ev) => { if (!ev.target.closest || !ev.target.closest('.scroll, #app.wide .screen')) ev.preventDefault(); }, { passive: false });
   document.addEventListener('contextmenu', (ev) => ev.preventDefault());
   document.addEventListener('dblclick', (ev) => ev.preventDefault());
   // every tap may need to wake the audio (iOS suspends it after calls and tab switches)

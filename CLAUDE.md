@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-NEO is a five-minute portrait roguelite for the phone browser in plain JavaScript: no build step, no dependencies, no modules. Read `README.md` for the file map and controls, `js/tuning.js` for every number, and `DECISIONS.md` before changing a design decision. Log any new major gameplay decision there.
+NEO is a five-minute roguelite for the phone browser (upright, or sideways with `#app.wide`) in plain JavaScript: no build step, no dependencies, no modules. Read `README.md` for the file map and controls, `js/tuning.js` for every number, and `DECISIONS.md` before changing a design decision. Log any new major gameplay decision there.
 
 ## Commands
 

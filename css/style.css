@@ -1,5 +1,7 @@
-/* NEO — a portrait column: the top bar, the room view, the control deck,
-   and the screens that open over them. Phosphor green on near-black. */
+/* NEO — upright, a column: the top bar, the room view, the control deck,
+   and the screens that open over them. Sideways (#app.wide), the room
+   stands in the middle with the controls either side. Phosphor green on
+   near-black. */
 
 :root {
   --bg: #010302;
@@ -125,6 +127,57 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 #app.lefty .stick-ghost.aim { left: 25%; }
 #app.hub-mode .deck-btn.focus, #app.hub-mode .deck-btn.phase, #app.hub-mode #minimap { display: none; }
 #app.hub-mode .hp, #app.hub-mode #sector { visibility: hidden; }
+
+/* ---- sideways (main.js adds .wide): the room in the middle, the HUD,
+   minimap and feed on the left, the buttons on the right; the deck fills
+   the whole screen behind the room, so either side takes a thumb ---- */
+:root { --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px); --side-w: calc((100% - var(--stage-w, 300px)) / 2); }
+#app.wide { left: 0; transform: none; max-width: none; display: block; border: none; box-shadow: none; }
+#app.wide #stage { position: absolute; top: 0; bottom: 0; left: 50%; width: var(--stage-w, 300px); margin-left: calc(var(--stage-w, 300px) / -2); z-index: 2; box-shadow: 0 0 0 1px #0c2a16, 0 0 40px rgba(60, 255, 110, 0.05); }
+#app.wide #deck { position: absolute; inset: 0; height: auto; padding: 0; border: none; background: radial-gradient(ellipse at 50% 110%, #04170a, #010302 60%); }
+#app.wide #topbar {
+  position: absolute; z-index: 3; top: 0; left: 0; width: var(--side-w); height: auto; flex-wrap: wrap; gap: 6px 12px;
+  padding: calc(10px + var(--safe-t)) 10px 0 calc(10px + var(--safe-l)); background: none; border: none; pointer-events: none;
+}
+#app.wide .hp { flex: 1 1 100%; }
+#app.wide #btn-pause { position: fixed; top: calc(8px + var(--safe-t)); right: calc(8px + var(--safe-r)); pointer-events: auto; }
+#app.wide #minimap { left: calc(10px + var(--safe-l)); top: calc(70px + var(--safe-t)); }
+#app.wide .feed { left: calc(90px + var(--safe-l)); right: auto; width: calc(var(--side-w) - 100px - var(--safe-l)); top: calc(66px + var(--safe-t)); height: 80px; font-size: 17px; line-height: 20px; }
+#app.wide .deck-buttons { top: calc(64px + var(--safe-t)); bottom: auto; right: var(--safe-r); width: 170px; height: 150px; }
+#app.wide .deck-btn.focus { width: 72px; height: 72px; right: 12px; top: 0; }
+#app.wide .deck-btn.phase { width: 66px; height: 66px; right: 94px; top: 46px; }
+#app.wide .deck-btn.act { right: 12px; top: 10px; }
+#app.wide.lefty #topbar { left: auto; right: 0; padding: calc(10px + var(--safe-t)) calc(10px + var(--safe-r)) 0 10px; }
+#app.wide.lefty #btn-pause { right: auto; left: calc(8px + var(--safe-l)); }
+#app.wide.lefty #minimap { left: auto; right: calc(10px + var(--safe-r)); }
+#app.wide.lefty .feed { left: auto; right: calc(90px + var(--safe-r)); width: calc(var(--side-w) - 100px - var(--safe-r)); }
+#app.wide.lefty .deck-buttons { right: auto; left: var(--safe-l); }
+#app.wide.lefty .deck-btn.focus { right: auto; left: 12px; }
+#app.wide.lefty .deck-btn.phase { right: auto; left: 94px; }
+#app.wide.lefty .deck-btn.act { right: auto; left: 12px; }
+#app.wide .stick-ghost { left: calc(var(--side-w) / 2); }
+#app.wide .stick-ghost.aim, #app.wide.lefty .stick-ghost { left: calc(100% - var(--side-w) / 2); }
+#app.wide.lefty .stick-ghost.aim { left: calc(var(--side-w) / 2); }
+#app.wide .hint { white-space: normal; text-align: center; font-size: 19px; width: max-content; max-width: 94%; }
+#app.wide .banner { font-size: 26px; }
+#app.wide .banner.boss { font-size: 22px; }
+/* screens scroll when they don't fit the short height, and centre when they do */
+#app.wide .screen { justify-content: flex-start; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; padding: calc(10px + var(--safe-t)) calc(16px + var(--safe-r)) calc(10px + var(--safe-b)) calc(16px + var(--safe-l)); }
+#app.wide .screen > :first-child { margin-top: auto; }
+#app.wide .screen > :last-child { margin-bottom: auto; }
+#app.wide .screen h2 { font-size: 28px; margin: 2px 0 8px; }
+#app.wide .logo { font-size: 84px; letter-spacing: 8px; }
+#app.wide .title-inner { margin: auto 0; }
+#app.wide .crt { padding: 8% 12% 0; }
+/* the compare card in two columns; patch and cache choices side by side */
+#app.wide #compare-card { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "a b" "row b"; gap: 0 18px; width: min(760px, 100%); }
+#app.wide #compare-card .cmp-a { grid-area: a; }
+#app.wide #compare-card .cmp-b { grid-area: b; }
+#app.wide #compare-card .row { grid-area: row; align-self: end; }
+#app.wide #compare-card .diff { margin-top: 0; }
+#app.wide .patch-options, #app.wide .cache-options { flex-direction: row; flex-wrap: wrap; align-items: stretch; width: min(920px, 100%); }
+#app.wide .option { flex: 1 1 0; min-width: 200px; }
+#app.wide #cache-options > .btn:last-child { flex: 1 1 100%; position: static; padding: 6px 12px; background: rgba(4, 24, 10, 0.6); }
 
 /* ---- screens ---- */
 .screen {
@@ -269,9 +322,6 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.8);
 }
 #app.no-scanlines .scanlines { background: none; }
-.rotate { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: #000; color: var(--green); font-size: 30px; text-align: center; }
-.rotate span { font-size: 20px; color: var(--dim); }
-@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) { .rotate { display: flex; } }
 
 /* long screens: the way out stays in reach while the list scrolls */
 .screen.scroll > .menu:last-child, #cache-options > .btn:last-child {

@@ -2,18 +2,18 @@
 
 > Wake up, Neo…
 
-A five-minute, twin-stick, portrait pixel-art roguelite for the phone browser. You wake at your desk at 3:14 in the morning. The monitor types to you. There's a knock at the door, and nobody is there. You walk out into a dungeon of code that builds itself as you go, and there's no way back.
+A five-minute, twin-stick pixel-art roguelite for the phone browser, upright or sideways. You wake at your desk at 3:14 in the morning. The monitor types to you. There's a knock at the door, and nobody is there. You walk out into a dungeon of code that builds itself as you go, and there's no way back.
 
 Every fight is a hack. Processes guard each room; you terminate them with exploits that fire glyphs of code. Loot drops as in Diablo: five rarities, random affixes and Zero-Day uniques. Between floors you install patches, and between runs you upgrade your kernel at the desk terminal.
 
-**Play:** https://doctorallen.github.io/Neo/ (best on a phone held upright; add it to your home screen to play full screen).
+**Play:** https://doctorallen.github.io/Neo/ (best on a phone, upright or sideways; add it to your home screen to play full screen).
 
 ## How to play
 
 | | Phone | Keyboard |
 |---|---|---|
-| Move | Left thumb: drag on the left of the bottom deck | WASD |
-| Hack (attack) | Right thumb: hold on the right of the deck to fire at the nearest process; drag to aim (aim assist picks the process nearest your aim) | Arrows, or hold the mouse on the room |
+| Move | Left thumb: drag on the left of the bottom deck (held sideways: anywhere left of the room) | WASD |
+| Hack (attack) | Right thumb: hold on the right of the deck (sideways: right of the room) to fire at the nearest process; drag to aim (aim assist picks the process nearest your aim) | Arrows, or hold the mouse on the room |
 | Phase (dash, dodges through packets) | Flick your thumb, or tap PHASE | Space |
 | Bullet Time | FOCUS, once its ring is full | Shift / E |
 | Pause | II | Esc / P |

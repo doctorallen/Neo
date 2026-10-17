@@ -69,8 +69,6 @@ function frame(now) {
     _resizeT -= dt;
     if (_resizeT <= 0) {
       _resizeT = 0.5; fitDeck(); resizeView();
-      // turned sideways on a phone: the rotate card covers the game, so pause it
-      if (window.matchMedia && matchMedia('(orientation: landscape) and (max-height: 500px) and (pointer: coarse)').matches && !Game.modal && !Game.flow && (Game.scene === 'run' || Game.scene === 'hub')) UI.openPause();
     }
     renderFrame();
   } catch (e) {
@@ -86,14 +84,28 @@ function noteError(e) {
   console.error(e);
 }
 
-// The control deck takes whatever height is left once a whole room fits
-// above it (a large room if possible, else a standard one), between 160 and
-// 250 CSS px, so on a phone in Safari, toolbars and all, the room doesn't
-// scroll.
-const DECK_MIN = 160, DECK_MAX = 250;
+// Upright, the control deck takes whatever height is left once a whole room
+// fits above it (a large room if possible, else a standard one), between 160
+// and 250 CSS px, so on a phone in Safari, toolbars and all, the room doesn't
+// scroll. Sideways (the screen more than 5:4 wide), the layout turns: the
+// room stands in the middle at the largest whole scale that fits a large
+// room top to bottom, with at least 150 CSS px either side for a thumb, and
+// the deck fills the sides (css: #app.wide).
+const DECK_MIN = 160, DECK_MAX = 250, WIDE_RATIO = 1.25, WIDE_SIDE = 150;
 function fitDeck() {
   const app = $('app'), stage = $('stage');
   const dpr = window.devicePixelRatio || 1;
+  const wide = window.innerWidth > window.innerHeight * WIDE_RATIO;
+  if (app.classList.contains('wide') !== wide) app.classList.toggle('wide', wide);
+  if (wide) {
+    const r = app.getBoundingClientRect();
+    let k = Math.max(1, Math.floor((r.height * dpr) / (ROOM_SIZE.large[1] * TILE)));
+    while (k > 1 && (r.width - (VIEW_W * k) / dpr) / 2 < WIDE_SIDE) k--;
+    // a device pixel spare, so rounding never drops the view to the scale below
+    const w = (VIEW_W * k + 1) / dpr + 'px';
+    if (document.documentElement.style.getPropertyValue('--stage-w') !== w) document.documentElement.style.setProperty('--stage-w', w);
+    return;
+  }
   const k = Math.max(1, Math.floor((stage.getBoundingClientRect().width * dpr) / VIEW_W)) / dpr; // CSS px per game px
   const safeB = parseFloat(getComputedStyle($('deck')).paddingBottom) || 0;
   const avail = app.getBoundingClientRect().height - $('topbar').getBoundingClientRect().height - safeB;

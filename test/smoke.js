@@ -340,10 +340,71 @@ async function desktop(browser) {
   await page.close();
 }
 
+// A phone held sideways: the room in the middle, a thumb either side of it,
+// and the screens still fit; turning it upright brings the deck back.
+async function sideways(browser) {
+  const { page, errors } = await openGame(browser, { width: 844, height: 390, save: { meta: { tutorialDone: true, introSeen: true } } });
+  await page.evaluate(installBot);
+  await sleep(700);
+  const lay = await page.evaluate(() => {
+    const st = document.getElementById('stage').getBoundingClientRect(), btns = [...document.querySelectorAll('#title-menu .btn')].map((b) => b.getBoundingClientRect());
+    return { wide: document.getElementById('app').classList.contains('wide'), stage: [st.left, st.width], titleFits: btns.every((r) => r.bottom <= innerHeight && r.top >= 0) };
+  });
+  check(lay.wide, 'sideways: the layout did not turn');
+  check(lay.stage[0] >= 150 && lay.stage[1] > 150, `sideways: the room view is ${JSON.stringify(lay.stage)}`);
+  check(lay.titleFits, 'sideways: the title menu runs off the screen');
+  await shot(page, 'smoke-sideways-title');
+  await page.evaluate(() => {
+    UI.hide(); stopRain(); startRun({ seed: 99 }); Game.debug.god = true;
+    for (let i = 0; i < 60 * 40 && !(Game.room.kind === 'combat' && Game.enemies.some((e) => !e.dead && e.spawnT <= 0)); i++) { Bot.tick(); Game.step(1 / 60); }
+    Input.bot = null; Input.update();
+  });
+  await sleep(450);
+  const fight = await page.evaluate(() => {
+    const st = document.getElementById('stage').getBoundingClientRect(), y = st.top + st.height * 0.6;
+    const deck = document.getElementById('deck');
+    const ev = (type, id, px, py) => deck.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: px, clientY: py, bubbles: true, cancelable: true }));
+    const p = Game.player, x0 = p.x, y0 = p.y, shots0 = p.shotCount;
+    const lx = st.left / 2, rx = st.right + (innerWidth - st.right) / 2;
+    ev('pointerdown', 81, lx, y); ev('pointermove', 81, lx, y - 40);
+    ev('pointerdown', 82, rx, y); ev('pointermove', 82, rx + 30, y);
+    for (let i = 0; i < 30; i++) Game.step(1 / 60);
+    const out = { fits: Game.viewH >= Game.room.h * TILE, moved: Math.hypot(p.x - x0, p.y - y0), shots: p.shotCount - shots0 };
+    ev('pointerup', 81, lx, y - 40); ev('pointerup', 82, rx + 30, y);
+    const b = ['btn-phase', 'btn-focus', 'btn-pause'].map((id) => document.getElementById(id).getBoundingClientRect());
+    out.buttonsClear = b.every((r) => r.right <= innerWidth && r.bottom <= innerHeight && r.left >= st.right);
+    Game.render();
+    return out;
+  });
+  await shot(page, 'smoke-sideways-fight');
+  check(fight.fits, 'sideways: the whole room does not fit top to bottom');
+  check(fight.moved > 4 && fight.shots >= 2, `sideways: a thumb either side didn't move and hack: ${JSON.stringify(fight)}`);
+  check(fight.buttonsClear, 'sideways: PHASE, FOCUS or pause sit off the screen or over the room');
+  // the compare card's buttons are on screen without scrolling
+  const cmp = await page.evaluate(() => {
+    const it = rollItem(Game.run.rng, { ilvl: 2, min: 2 });
+    UI.openCompare(it, () => {});
+    const r = document.getElementById('cmp-equip').getBoundingClientRect();
+    return r.bottom <= innerHeight && r.top >= 0;
+  });
+  await sleep(450);
+  await shot(page, 'smoke-sideways-compare');
+  check(cmp, 'sideways: EQUIP is off the screen on the compare card');
+  await page.evaluate(() => UI.hide());
+  // turned upright again
+  await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
+  await sleep(900);
+  const up = await page.evaluate(() => ({ wide: document.getElementById('app').classList.contains('wide'), deck: document.getElementById('deck').getBoundingClientRect().height }));
+  check(!up.wide && up.deck >= 150, `sideways: turning upright didn't restore the deck: ${JSON.stringify(up)}`);
+  for (const e of errors) failures.push('sideways: page error: ' + e);
+  await page.close();
+}
+
 (async () => {
   const browser = await launch();
   try {
     await phone(browser);
+    await sideways(browser);
     await desktop(browser);
   } catch (e) {
     failures.push('crashed: ' + (e.stack || e).toString().split('\n').slice(0, 3).join(' '));

@@ -8,7 +8,7 @@
 // ---------------------------------------------------------------------------
 
 const HINTS = {
-  move: { touch: '> drag in the deck to move', keys: '> WASD or arrows to move' },
+  move: { touch: () => ($('app').classList.contains('wide') ? `> drag the ${Save.settings.leftHanded ? 'right' : 'left'} side to move` : '> drag in the deck to move'), keys: '> WASD or arrows to move' },
   aim: { touch: () => `> hold the ${Save.settings.leftHanded ? 'left' : 'right'} side to hack`, keys: '> arrows or the mouse to hack' },
   door: { touch: '> drag in the deck: go to the door', keys: '> WASD: go to the door', id: 'move' },
   'phase-hurt': { touch: '> flick, or PHASE, to dodge', keys: '> SPACE to phase through attacks', btn: 'btn-phase', id: 'phase' },
@@ -246,16 +246,18 @@ const UI = {
     const col = T.rarity.colors[item.rarity];
     const has = item.implicit.concat(item.affixes).map((a) => fmtAffix(a.id, a.v));
     if (item.slot === 'exploit') has.unshift(exploitPatternText(item.base));
+    // two groups, so that held sideways they can stand side by side
     card.innerHTML =
-      this.verdictHtml(v, true) +
+      '<div class="cmp-a">' + this.verdictHtml(v, true) +
       `<div class="rar" style="color:${col}">${T.rarity.names[item.rarity].toUpperCase()} ${SLOT_NAMES[item.slot].toUpperCase()}${item.slot === 'exploit' ? ' · ' + escapeHtml(T.exploits[item.base].name) : ''}</div>` +
       `<div class="name" style="color:${col}">${escapeHtml(item.name)}</div>` +
       (item.unique ? `<div class="power">${escapeHtml(ZD[item.unique].power)}</div>` + this.protoChip(ZD[item.unique].proto, null, false).replace('class="proto"', 'class="proto card-proto"').replace(/ \d\/3/, '') : '') +
+      '</div><div class="cmp-b">' +
       `<div class="diff">${diffs.map((d) => `<div class="line ${d.up ? 'up' : 'down'}">${d.up ? '▲' : '▼'} ${d.text}</div>`).join('') || '<div class="line" style="color:#4f8a5e">no change to your stats</div>'}</div>` +
       (item.unstable ? this.unstableHtml(item) : '') +
       `<div class="has">level ${item.ilvl} · ${has.map(escapeHtml).join(' · ')}</div>` +
       (cur ? `<div class="equipped">replaces: <span style="color:${T.rarity.colors[cur.rarity]}">${escapeHtml(cur.name)}</span> <span class="dimr">(${T.rarity.names[cur.rarity].toLowerCase()})</span></div>` : '') +
-      `<div class="row"></div>`;
+      '</div><div class="row"></div>';
     const row = card.querySelector('.row');
     const done = (c) => { this.hide(); cb(c); };
     // the button that's lit is the one the numbers recommend
