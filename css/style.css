@@ -75,7 +75,7 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 
 /* ---- the control deck ---- */
 #deck {
-  flex: 0 0 auto; position: relative; height: calc(clamp(196px, 27%, 250px) + var(--safe-b)); padding-bottom: var(--safe-b);
+  flex: 0 0 auto; position: relative; height: calc(var(--deck-h, 220px) + var(--safe-b)); padding-bottom: var(--safe-b);
   background: radial-gradient(ellipse at 50% 120%, #04170a, #010302 70%); border-top: 1px solid #0c2a16;
   touch-action: none; overflow: hidden;
 }
@@ -99,10 +99,10 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .ring-bg { fill: none; stroke: #0c2a16; stroke-width: 6; }
 .ring-fg { fill: none; stroke: var(--green); stroke-width: 6; stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 0.1s; }
 .deck-btn span { position: relative; }
-.deck-btn.focus { width: 80px; height: 80px; right: 12px; top: 18px; }
+.deck-btn.focus { width: 80px; height: 80px; right: 12px; top: 8px; }
 .deck-btn.focus.ready { background: #0a3a18; box-shadow: 0 0 18px rgba(60, 255, 110, 0.6); color: #eaffef; }
 .deck-btn.focus:not(.ready) { opacity: 0.55; }
-.deck-btn.phase { width: 64px; height: 64px; right: 24px; top: 116px; font-size: 16px; }
+.deck-btn.phase { width: 64px; height: 64px; right: 24px; top: 92px; font-size: 16px; }
 .deck-btn.phase.cooling { opacity: 0.5; }
 .deck-btn.act { width: 88px; height: 88px; right: 8px; top: 30px; font-size: 20px; border-radius: 12px; border-color: var(--green); color: var(--green); box-shadow: 0 0 14px rgba(60, 255, 110, 0.3); }
 .deck-btn.pulse { animation: pulse 0.8s infinite; }

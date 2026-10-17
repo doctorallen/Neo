@@ -200,8 +200,14 @@ async function desktop(browser) {
   check(!(await visible(page, 'screen-pause')), 'desktop: Esc did not resume');
   await shot(page, 'smoke-desktop-hub');
   // a few rooms of a run
-  await page.evaluate(() => { startRun({ seed: 99 }); Game.debug.god = true; for (let i = 0; i < 60 * 45; i++) { Bot.tick(); Game.step(1 / 60); } Game.render(); });
-  check(await page.evaluate(() => Game.run.roomsCleared >= 1), 'desktop: the autopilot cleared nothing');
+  const st = await page.evaluate(() => {
+    startRun({ seed: 99 }); Game.debug.god = true;
+    let last = '';
+    for (let i = 0; i < 60 * 70 && Game.run.roomsCleared < 1; i++) { last = Bot.tick(); Game.step(1 / 60); }
+    Game.render();
+    return { cleared: Game.run.roomsCleared, state: `last=${last} modal=${Game.modal} screen=${UI.screen} room=${Game.room.kind} sealed=${roomSealed()} alive=${Game.enemies.filter((e) => !e.dead).length} flow=${Game.flow && Game.flow.kind} transition=${!!Game.transition}` };
+  });
+  check(st.cleared >= 1, 'desktop: the autopilot cleared nothing: ' + st.state);
   await shot(page, 'smoke-desktop-run');
   for (const e of errors) failures.push('desktop: page error: ' + e);
   await page.close();

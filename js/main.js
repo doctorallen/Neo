@@ -67,7 +67,7 @@ function frame(now) {
     while (_acc >= STEP && n < 5) { step(STEP); _acc -= STEP; n++; }
     if (n === 5) _acc = 0;
     _resizeT -= dt;
-    if (_resizeT <= 0) { _resizeT = 0.5; resizeView(); }
+    if (_resizeT <= 0) { _resizeT = 0.5; fitDeck(); resizeView(); }
     renderFrame();
   } catch (e) {
     noteError(e);
@@ -80,6 +80,26 @@ function noteError(e) {
   Errors.push(String(e && e.stack || e));
   if (Errors.length > 20) Errors.shift();
   console.error(e);
+}
+
+// The control deck takes whatever height is left once a whole room fits
+// above it (a large room if possible, else a standard one), between 160 and
+// 250 CSS px, so on a phone in Safari, toolbars and all, the room doesn't
+// scroll.
+const DECK_MIN = 160, DECK_MAX = 250;
+function fitDeck() {
+  const app = $('app'), stage = $('stage');
+  const dpr = window.devicePixelRatio || 1;
+  const k = Math.max(1, Math.floor((stage.getBoundingClientRect().width * dpr) / VIEW_W)) / dpr; // CSS px per game px
+  const safeB = parseFloat(getComputedStyle($('deck')).paddingBottom) || 0;
+  const avail = app.getBoundingClientRect().height - $('topbar').getBoundingClientRect().height - safeB;
+  let deck = DECK_MIN;
+  for (const size of ['large', 'std']) {
+    const d = Math.floor(avail - ROOM_SIZE[size][1] * TILE * k - 2);
+    if (d >= DECK_MIN) { deck = Math.min(DECK_MAX, d); break; }
+  }
+  const v = deck + 'px';
+  if (document.documentElement.style.getPropertyValue('--deck-h') !== v) document.documentElement.style.setProperty('--deck-h', v);
 }
 
 function fitAppHeight() {
@@ -96,8 +116,10 @@ function boot() {
   setupInput();
   UI.init();
   fitAppHeight();
+  fitDeck();
+  resizeView();
   let rt = 0;
-  const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { fitAppHeight(); resizeView(); if (Rain.on && Rain.fit) Rain.fit(); }, 100); };
+  const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { fitAppHeight(); fitDeck(); resizeView(); if (Rain.on && Rain.fit) Rain.fit(); }, 100); };
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', onResize);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
