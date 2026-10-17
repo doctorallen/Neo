@@ -34,7 +34,7 @@ const UI = {
 
   // ---- screens ----
   show(id, { modal = true, keep = false } = {}) {
-    if (this.screen && !keep) $(this.screen).hidden = true;
+    if (this.screen) $(this.screen).hidden = true;
     if (this.screen && keep) this.stack.push(this.screen);
     this.screen = id;
     if (id) $(id).hidden = false;
