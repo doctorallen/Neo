@@ -93,6 +93,7 @@ const UI = {
   // ---- title ----
   openTitle() {
     Game.scene = 'title';
+    Game.pendingDaily = false;
     Game.run = null; Game.room = null; Game.hub = null;
     this.show('screen-title', { modal: false });
     this.buildTitle();

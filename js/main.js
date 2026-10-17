@@ -67,7 +67,11 @@ function frame(now) {
     while (_acc >= STEP && n < 5) { step(STEP); _acc -= STEP; n++; }
     if (n === 5) _acc = 0;
     _resizeT -= dt;
-    if (_resizeT <= 0) { _resizeT = 0.5; fitDeck(); resizeView(); }
+    if (_resizeT <= 0) {
+      _resizeT = 0.5; fitDeck(); resizeView();
+      // turned sideways on a phone: the rotate card covers the game, so pause it
+      if (window.matchMedia && matchMedia('(orientation: landscape) and (max-height: 500px) and (pointer: coarse)').matches && !Game.modal && !Game.flow && (Game.scene === 'run' || Game.scene === 'hub')) UI.openPause();
+    }
     renderFrame();
   } catch (e) {
     noteError(e);

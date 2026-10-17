@@ -211,10 +211,12 @@ function clearRoom(room) {
   const r = Game.run;
   r.roomsCleared++;
   if (room.tutorial) Save.meta.tutorialDone = true;
-  Sound.play('door_open');
   Sound.setTension(0);
-  UI.feed('> ACCESS GRANTED');
-  UI.banner('ACCESS GRANTED');
+  if (room.kind !== 'boss') {
+    Sound.play('door_open');
+    UI.feed('> ACCESS GRANTED');
+    UI.banner('ACCESS GRANTED');
+  }
   if (r.stats.powers.cookie) healPlayer(r.stats.maxHp * 0.25, true);
   // the white rabbit: hops in and shows the way to a hidden door
   for (const d of Object.values(room.doors)) {
