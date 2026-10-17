@@ -81,16 +81,24 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 }
 #minimap { position: absolute; left: 8px; top: 8px; width: 72px; height: 72px; image-rendering: pixelated; pointer-events: none; opacity: 0.95; }
 .feed {
-  position: absolute; left: 88px; right: 100px; top: 6px; font-size: 18px; line-height: 19px; color: var(--green);
+  position: absolute; left: 88px; right: 146px; top: 6px; font-size: 18px; line-height: 19px; color: var(--green);
   pointer-events: none; overflow: hidden; height: 60px; text-shadow: 0 0 6px rgba(60, 255, 110, 0.4);
 }
 .feed div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .feed div:not(:last-child) { opacity: 0.45; }
 .stick-base { position: absolute; width: 96px; height: 96px; margin: -48px 0 0 -48px; border: 2px solid rgba(60, 255, 110, 0.45); border-radius: 50%; pointer-events: none; background: rgba(60, 255, 110, 0.05); }
 .stick-knob { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(60, 255, 110, 0.55); box-shadow: 0 0 12px rgba(60, 255, 110, 0.6); }
-.stick-ghost { position: absolute; left: 34%; top: 58%; width: 96px; height: 96px; margin: -48px 0 0 -48px; border: 2px dashed rgba(60, 255, 110, 0.25); border-radius: 50%; pointer-events: none; animation: ghost 2s infinite; }
+.stick-ghost { position: absolute; left: 25%; top: 64%; width: 96px; height: 96px; margin: -48px 0 0 -48px; border: 2px dashed rgba(60, 255, 110, 0.25); border-radius: 50%; pointer-events: none; animation: ghost 2s infinite; }
 @keyframes ghost { 50% { opacity: 0.35; transform: translateX(10px); } }
-.deck-buttons { position: absolute; right: 0; top: 0; bottom: var(--safe-b); width: 100px; pointer-events: none; }
+/* the aim stick: paler, with a crosshair for a knob */
+.stick-base.aim { border-color: rgba(184, 255, 200, 0.45); background: rgba(184, 255, 200, 0.04); }
+.stick-base.aim .stick-knob { background: transparent; border: 2px solid rgba(184, 255, 200, 0.8); box-shadow: 0 0 10px rgba(184, 255, 200, 0.5); box-sizing: border-box; }
+.stick-base.aim .stick-knob::before, .stick-base.aim .stick-knob::after { content: ''; position: absolute; background: rgba(184, 255, 200, 0.9); }
+.stick-base.aim .stick-knob::before { left: 50%; top: 6px; bottom: 6px; width: 2px; margin-left: -1px; }
+.stick-base.aim .stick-knob::after { top: 50%; left: 6px; right: 6px; height: 2px; margin-top: -1px; }
+.stick-ghost.aim { left: 75%; border-color: rgba(184, 255, 200, 0.3); animation-name: ghost-aim; }
+@keyframes ghost-aim { 50% { opacity: 0.35; transform: translateY(-10px); } }
+.deck-buttons { position: absolute; right: 0; top: 0; bottom: var(--safe-b); width: 146px; pointer-events: none; }
 .deck-btn {
   position: absolute; pointer-events: auto; border-radius: 50%; background: rgba(4, 24, 10, 0.9); border: 1px solid #1d4a2a;
   display: flex; align-items: center; justify-content: center; font-size: 18px; letter-spacing: 1px; color: var(--ink); padding: 0;
@@ -99,20 +107,22 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
 .ring-bg { fill: none; stroke: #0c2a16; stroke-width: 6; }
 .ring-fg { fill: none; stroke: var(--green); stroke-width: 6; stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 0.1s; }
 .deck-btn span { position: relative; }
-.deck-btn.focus { width: 80px; height: 80px; right: 12px; top: 8px; }
+.deck-btn.focus { width: 64px; height: 64px; right: 10px; top: 8px; font-size: 16px; }
 .deck-btn.focus.ready { background: #0a3a18; box-shadow: 0 0 18px rgba(60, 255, 110, 0.6); color: #eaffef; }
 .deck-btn.focus:not(.ready) { opacity: 0.55; }
-.deck-btn.phase { width: 64px; height: 64px; right: 24px; top: 92px; font-size: 16px; }
+.deck-btn.phase { width: 56px; height: 56px; right: 84px; top: 12px; font-size: 15px; }
 .deck-btn.phase.cooling { opacity: 0.5; }
 .deck-btn.act { width: 88px; height: 88px; right: 8px; top: 30px; font-size: 20px; border-radius: 12px; border-color: var(--green); color: var(--green); box-shadow: 0 0 14px rgba(60, 255, 110, 0.3); }
 .deck-btn.pulse { animation: pulse 0.8s infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(60, 255, 110, 0.35); } }
 #app.lefty .deck-buttons { right: auto; left: 0; }
-#app.lefty .deck-btn.focus { right: auto; left: 12px; }
-#app.lefty .deck-btn.phase { right: auto; left: 24px; }
+#app.lefty .deck-btn.focus { right: auto; left: 10px; }
+#app.lefty .deck-btn.phase { right: auto; left: 84px; }
 #app.lefty .deck-btn.act { right: auto; left: 8px; }
 #app.lefty #minimap { left: auto; right: 8px; }
-#app.lefty .feed { left: 100px; right: 88px; }
+#app.lefty .feed { left: 146px; right: 88px; }
+#app.lefty .stick-ghost { left: 75%; }
+#app.lefty .stick-ghost.aim { left: 25%; }
 #app.hub-mode .deck-btn.focus, #app.hub-mode .deck-btn.phase, #app.hub-mode #minimap { display: none; }
 #app.hub-mode .hp, #app.hub-mode #sector { visibility: hidden; }
 

@@ -23,9 +23,8 @@ const T = {
     hurtInvuln: 0.6,
     phaseDist: 52, phaseTime: 0.14, phaseInvuln: 0.30, phaseCd: 1.6, phaseCdMin: 0.8, phaseCdMaxCut: 0.5,
     phaseBulletFocus: 6,
-    fireDelay: 0.06, // after the stick is released
-    movingDamage: 0.65, // with "fire while moving"
-    compileAfter: 1.2, compileRate: 0.25, // standing still this long fires faster
+    aimAssist: 20, aimAssistHoming: 45, aimRange: 220, // degrees either side of the aim, px
+    compileAfter: 1.2, compileRate: 0.25, // holding fire this long fires faster
   },
 
   focus: {

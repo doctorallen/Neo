@@ -191,11 +191,39 @@ function drawRoom(ctx, room) {
   if (p && !p.hidden) list.push({ y: p.y, f: () => drawPlayer(ctx, p) });
   list.sort((a, b) => a.y - b.y);
   for (const it of list) it.f();
+  if (p && !p.hidden && Game.scene === 'run') drawAim(ctx, p);
   drawHazardsOver(ctx);
   drawShots(ctx);
   drawBullets(ctx);
   drawFx(ctx);
   drawFloats(ctx);
+}
+
+// Where Neo is hacking: brackets on the process the aim assist picked, or a
+// short dotted line along the aim when nothing is in the way.
+function drawAim(ctx, p) {
+  if (p.aimAng === null) return;
+  const e = p.aimTarget;
+  if (e && !e.dead) {
+    const hw = Math.round(e.hr + 3), cx = Math.round(e.x), cy = Math.round(e.y - e.h / 2);
+    const x0 = cx - hw, y0 = cy - hw, x1 = cx + hw, y1 = cy + hw;
+    ctx.fillStyle = '#b8ffc8';
+    ctx.globalAlpha = 0.85;
+    for (const [x, y, sx, sy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
+      ctx.fillRect(sx > 0 ? x : x - 2, y, 3, 1);
+      ctx.fillRect(x, sy > 0 ? y : y - 2, 1, 3);
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
+  const ox = p.x, oy = p.y - 7, c = Math.cos(p.aimAng), s = Math.sin(p.aimAng);
+  ctx.fillStyle = '#b8ffc8';
+  for (let i = 0; i < 4; i++) {
+    const d = 12 + i * 7;
+    ctx.globalAlpha = 0.6 - i * 0.12;
+    ctx.fillRect(Math.round(ox + c * d), Math.round(oy + s * d), 1, 1);
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawCollapse(ctx, room) {
@@ -224,8 +252,8 @@ function drawPlayer(ctx, p) {
   else if (p.firing && set.type) img = set.type[Math.floor(p.anim * 10) % set.type.length];
   else img = set.idle[Math.floor(p.anim * 1.6) % set.idle.length];
   blit(ctx, img, p.x, p.y, { flip, tint: p.hurtT > 0.15 ? '#ff6070' : null, alpha: p.phaseT > 0 ? 0.7 : 1 });
-  // compiling: standing still long enough to fire faster throws off sparks of code
-  if (p.firing && p.stillT >= T.player.compileAfter && !Game.bt) {
+  // compiling: holding fire long enough to fire faster throws off sparks of code
+  if (p.firing && p.fireHeldT >= T.player.compileAfter && !Game.bt) {
     ctx.fillStyle = Math.random() < 0.5 ? '#3cff6e' : '#b8ffc8';
     ctx.fillRect(Math.round(p.x + p.facing * (5 + Math.random() * 3)), Math.round(p.y - 8 - Math.random() * 6), 1, 1);
   }

@@ -16,7 +16,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? Number
 const GOD_SEEDS = [3, 7, 11];
 const MORTAL = arg('--mortal', 6);
 
-const HUMAN = { react: 0.25, notice: 0.7 };
+const HUMAN = { react: 0.25, notice: 0.7, aimErr: 25 };
 
 async function play(browser, seed, god, depth = 1, skill = null) {
   const { page, errors } = await openGame(browser, {});

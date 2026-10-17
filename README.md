@@ -12,8 +12,8 @@ Every fight is a hack. Processes guard each room; you terminate them with exploi
 
 | | Phone | Keyboard |
 |---|---|---|
-| Move | Drag anywhere in the bottom deck | WASD / arrows |
-| Hack (attack) | Let go: Neo fires at the nearest process while standing still | Stand still |
+| Move | Left thumb: drag on the left of the bottom deck | WASD |
+| Hack (attack) | Right thumb: hold on the right of the deck to fire at the nearest process; drag to aim (aim assist picks the process nearest your aim) | Arrows, or hold the mouse on the room |
 | Phase (dash, dodges through packets) | Flick your thumb, or tap PHASE | Space |
 | Bullet Time | FOCUS, once its ring is full | Shift / E |
 | Pause | II | Esc / P |
@@ -22,7 +22,8 @@ Every fight is a hack. Processes guard each room; you terminate them with exploi
 - **Caches:** stand in the ring to decrypt one, then choose one of the items inside.
 - **Loot:** walk over loot once the room is clear to compare it with what you're wearing, then EQUIP or SCRAP it for Data. Commons are auto-scrapped by default (see Settings).
 - **Payphones:** the ringing payphone is the exit. Answer it to choose a patch and go deeper.
-- **Bullet Time:** standing still fires faster after a moment ("compiling"). Bullet Time slows the world to a quarter of its speed, and in it you fire while moving.
+- **Hacking:** you fire while moving, at full damage. Holding fire for a moment fires faster ("compiling") until you let go. Left-handed (Settings) swaps the sides.
+- **Bullet Time:** slows the world to a quarter of its speed and doubles your fire rate.
 - **Phase:** phasing through a red packet deletes it and charges your focus.
 - **After a run:** Data is kept when you die. Spend it at the desk terminal (JACK IN) on permanent upgrades and on decompiling new Zero-Days. Beat the Agent to unlock Depth, a deeper and harder layer.
 

@@ -2,8 +2,9 @@
 // Every screen, through the real controls. On a phone (touch): the title,
 // the whole cold open, walking with the joystick, the terminal and an
 // upgrade, the door, a run (pause, loadout, settings, a flick to phase,
-// Bullet Time, a compare card), death, the summary, and the short wake-up.
-// On a desktop (keyboard): moving with WASD, Esc to pause, a few rooms.
+// Bullet Time, both thumbs at once in a fight, a compare card), death, the
+// summary, and the short wake-up. On a desktop (keyboard and mouse): moving
+// with WASD, Esc to pause, a few rooms, hacking with the arrows and the mouse.
 // No page errors anywhere; screenshots of each screen go to test/out/.
 const { launch, openGame, shot, finish, PHONE, DESKTOP } = require('./lib');
 const { installBot } = require('./botlib');
@@ -69,6 +70,10 @@ async function phone(browser) {
   await drag(page, deck[0] - 60, deck[1], 40, 0, 30);
   const after = await page.evaluate(() => [Game.player.x, Game.player.y]);
   check(after[0] > before[0] + 4, `phone: dragging right didn't move Neo (${before} → ${after})`);
+  // in the apartment the aim side of the deck moves him too
+  const b1 = await page.evaluate(() => Game.player.x);
+  await drag(page, deck[0] + 60, deck[1], -40, 0, 30);
+  check((await page.evaluate(() => Game.player.x)) < b1 - 4, 'phone: in the apartment, a drag on the right of the deck did not move Neo');
   // a touch on the room view does not move him
   const stage = await center(page, '#stage');
   const b2 = await page.evaluate(() => Game.player.x);
@@ -153,6 +158,42 @@ async function phone(browser) {
   await page.evaluate(() => { Game.debug.god = true; for (let i = 0; i < 60 * 40 && !(Game.room.kind === 'combat' && roomSealed()); i++) { Bot.tick(); Game.step(1 / 60); } Game.render(); });
   check(await page.evaluate(() => roomSealed()), 'phone: never reached a fight');
   await shot(page, 'smoke-fight');
+  // both thumbs at once: the left one walks, the right one aims and hacks
+  await page.evaluate(() => { Input.bot = null; Input.update(); for (let i = 0; i < 60 && !Game.enemies.some((e) => !e.dead && e.spawnT <= 0); i++) Game.step(1 / 60); });
+  const twin = await page.evaluate(([x, y]) => {
+    const deck = document.getElementById('deck');
+    const ev = (type, id, px, py) => deck.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: px, clientY: py, bubbles: true, cancelable: true, isPrimary: id === 91 }));
+    const p = Game.player, x0 = p.x, y0 = p.y, shots0 = p.shotCount;
+    ev('pointerdown', 91, x - 110, y + 20); ev('pointermove', 91, x - 110, y - 20); // walk up
+    ev('pointerdown', 92, x + 110, y + 20); ev('pointermove', 92, x + 140, y + 20); // aim right
+    const both = !!Input.stick && !!Input.aimStick, aimShown = !document.getElementById('aim-base').hidden;
+    for (let i = 0; i < 30; i++) Game.step(1 / 60);
+    const out = { both, aimShown, moved: Math.hypot(p.x - x0, p.y - y0), shots: p.shotCount - shots0, aimAng: p.aimAng };
+    Game.render();
+    return out;
+  }, deck);
+  await shot(page, 'smoke-twinstick');
+  check(twin.both && twin.aimShown, `phone: two thumbs did not get both sticks: ${JSON.stringify(twin)}`);
+  check(twin.moved > 4, `phone: the move thumb didn't move Neo while the aim thumb was down: ${JSON.stringify(twin)}`);
+  check(twin.shots >= 2, `phone: holding the aim stick didn't hack: ${JSON.stringify(twin)}`);
+  const released = await page.evaluate(([x, y]) => {
+    const deck = document.getElementById('deck');
+    const ev = (type, id, px, py) => deck.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: px, clientY: py, bubbles: true, cancelable: true }));
+    ev('pointerup', 91, x - 110, y - 20); ev('pointerup', 92, x + 140, y + 20);
+    const p = Game.player; Game.step(1 / 60); const s0 = p.shotCount;
+    for (let i = 0; i < 30; i++) Game.step(1 / 60);
+    const stopped = p.shotCount === s0 && !p.firing;
+    // a thumb held on the aim side without dragging hacks the nearest process
+    ev('pointerdown', 93, x + 100, y + 30);
+    const s1 = p.shotCount;
+    for (let i = 0; i < 30; i++) Game.step(1 / 60);
+    const auto = p.shotCount - s1, locked = !!p.aimTarget;
+    ev('pointerup', 93, x + 100, y + 30);
+    return { stopped, auto, locked, hidden: document.getElementById('aim-base').hidden };
+  }, deck);
+  check(released.stopped, `phone: Neo kept hacking after the aim thumb lifted: ${JSON.stringify(released)}`);
+  check(released.auto >= 2 && released.locked, `phone: holding the aim side without dragging didn't hack the nearest process: ${JSON.stringify(released)}`);
+  check(released.hidden, 'phone: the aim stick stayed on screen after the thumb lifted');
   await page.evaluate(() => { for (let i = 0; i < 60 * 60 && roomSealed(); i++) { Bot.tick(); Game.step(1 / 60); } Input.bot = null; Input.update(); Game.render(); });
   check(await page.evaluate(() => Game.room.cleared), 'phone: the fight never ended');
   // a compare card: an item dropped at his feet in a cleared room
@@ -216,6 +257,29 @@ async function desktop(browser) {
   });
   check(st.cleared >= 1, 'desktop: the autopilot cleared nothing: ' + st.state);
   await shot(page, 'smoke-desktop-run');
+  // the arrows and the mouse hack; WASD still walks
+  await page.evaluate(() => { for (let i = 0; i < 600 && Game.modal; i++) { Bot.tick(); Game.step(1 / 60); } Input.bot = null; Input.update(); });
+  await sleep(450);
+  const shots = () => page.evaluate(() => Game.player.shotCount);
+  let s0 = await shots();
+  const px0 = await page.evaluate(() => Game.player.x);
+  await page.keyboard.down('ArrowLeft');
+  await run(page, 0.4);
+  await page.keyboard.up('ArrowLeft');
+  check((await shots()) > s0, 'desktop: an arrow key did not hack');
+  check(Math.abs((await page.evaluate(() => Game.player.x)) - px0) < 0.5, 'desktop: an arrow key moved Neo in a run');
+  await run(page, 0.2);
+  s0 = await shots();
+  const stage = await center(page, '#stage');
+  await page.mouse.move(stage[0] + 40, stage[1] - 30);
+  await page.mouse.down();
+  await run(page, 0.4);
+  const aimed = await page.evaluate(() => Game.player.aimAng);
+  await page.mouse.up();
+  check((await shots()) > s0, 'desktop: holding the mouse on the room did not hack');
+  check(aimed !== null && Math.cos(aimed) > 0, `desktop: the mouse aim points the wrong way (${aimed})`);
+  await run(page, 0.2);
+  check(!(await page.evaluate(() => Game.player.firing)), 'desktop: still hacking after the mouse button came up');
   for (const e of errors) failures.push('desktop: page error: ' + e);
   await page.close();
 }

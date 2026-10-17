@@ -144,7 +144,7 @@ function spawnWave(room, i) {
     Game.enemies.push(e);
   }
   Sound.play('spawn');
-  if (i === 0 && Input.moving()) UI.hint('stop');
+  if (i === 0) { UI.hint('aim'); if (room.tutorial) $('aim-ghost').hidden = !!Input.aimStick; }
 }
 
 // Somewhere to materialise: on open floor, in view, away from Neo, the doors

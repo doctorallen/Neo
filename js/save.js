@@ -19,7 +19,7 @@ function defaultSave() {
     version: 1,
     settings: {
       music: 0.5, sfx: 0.8, haptics: true, shake: !calm, scanlines: true, reducedFlash: calm,
-      damageNumbers: true, fireWhileMoving: false, leftHanded: false, flickPhase: true,
+      damageNumbers: true, aimAssist: true, leftHanded: false, flickPhase: true,
       autoScrap: 1, // scrap drops below this rarity on sight: 0 off, 1 Commons, 2 Commons and Uncommons
       fullIntro: false, // play the whole cold open every time, not only the first
     },

@@ -5,11 +5,11 @@ There's been no human playtest. Every number here comes from the autopilot in `t
 ## The autopilot
 
 - **What it does:**
-  - fights by standing still to hack, and steps to the most open side when a process gets within about 20 px
+  - fights by holding the aim stick on the nearest process, and steps to the most open side (still firing) when a process gets within about 30 px
   - phases across packets about to hit it
   - uses Bullet Time in busy fights
   - decrypts every cache, visits side rooms, equips whatever the compare card calls better, and takes the first patch offered
-- **The "human" setting** gives it a 0.25 s reaction time to new packets, and it notices only 70% of them. It still moves with machine precision, never panics, and needs no time to read cards. So it's probably better than a first-time player and worse than a practised one.
+- **The "human" setting** gives it a 0.25 s reaction time to new packets, and it notices only 70% of them. Its aim wobbles up to 25° either side, re-rolled every 0.3 s, so some shots fall outside the 20° aim assist. It still moves with machine precision, never panics, and needs no time to read cards. So it's probably better than a first-time player and worse than a practised one.
 - **Run length:** bot times exclude reading cards and menus. A person adds roughly 20–40 s a run (patch picks, compare cards, the apartment).
 
 ## Run length
@@ -38,6 +38,10 @@ A winning run takes about 3:00–4:45 of game time, or **about 3.5–5 minutes**
 | Half the upgrades | 12/12 | |
 | All upgrades, Depth 3 | 9/12 | |
 | All upgrades, Depth 5 | 3/12 | The long-term challenge |
+
+### After the switch to twin-stick (decision 36)
+
+Same 16 seeds, fresh, "human" bot: **9/16 won** (was 7/16 standing still to fire). Winning runs took 3:05–5:40 of game time. God-mode runs: 197 s, 231 s, 217 s. Enemy numbers were left alone, because the bot doesn't pay the cost of steering and aiming with two thumbs.
 
 ## What changed because of these numbers
 

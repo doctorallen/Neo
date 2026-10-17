@@ -9,8 +9,8 @@
 
 const HINTS = {
   move: { touch: '> drag in the deck to move', keys: '> WASD or arrows to move' },
+  aim: { touch: () => `> hold the ${Save.settings.leftHanded ? 'left' : 'right'} side to hack`, keys: '> arrows or the mouse to hack' },
   door: { touch: '> drag in the deck: go to the door', keys: '> WASD: go to the door', id: 'move' },
-  stop: { touch: '> let go to hack', keys: '> stand still to hack' },
   'phase-hurt': { touch: '> flick, or PHASE, to dodge', keys: '> SPACE to phase through attacks', btn: 'btn-phase', id: 'phase' },
   focus: { touch: '> FOCUS is ready: tap it', keys: '> SHIFT for bullet time', btn: 'btn-focus' },
   decrypt: { touch: '> stand in the ring to decrypt', keys: '> stand in the ring to decrypt' },
@@ -442,7 +442,7 @@ const UI = {
     toggle('CRT scanlines', 'scanlines');
     toggle('Damage numbers', 'damageNumbers');
     toggle('Flick to phase', 'flickPhase');
-    toggle('Fire while moving', 'fireWhileMoving');
+    toggle('Aim assist', 'aimAssist');
     toggle('Left-handed', 'leftHanded');
     toggle('Full intro every time', 'fullIntro');
     const names = ['OFF', 'COMMON', 'UNCOMMON'];
@@ -477,16 +477,18 @@ const UI = {
   onFloorStart(n, resumed) {
     $('app').classList.remove('hub-mode');
     $('btn-act').hidden = true;
+    $('aim-ghost').hidden = true;
     this.feedLines = [];
     this.feed(`> sector ${n}: ${T.floors[n - 1].sector}${resumed ? ' (restored)' : ''}`);
     if (n === 5) this.feed('> core reached');
     this.banner(n === 5 ? 'CORE' : `SECTOR ${n}`);
     this.updateHud(true);
   },
-  onRoomChange() { this.drawMinimap(); },
+  onRoomChange() { this.drawMinimap(); $('aim-ghost').hidden = true; },
   onHub(h) {
     $('app').classList.add('hub-mode');
     $('btn-act').hidden = true;
+    $('aim-ghost').hidden = true;
     this.feedLines = [];
     $('feed').innerHTML = '';
     $('stick-ghost').hidden = Save.meta.tutorialDone;
@@ -518,7 +520,8 @@ const UI = {
     Save.meta.hints[key] = true;
     this.hintId = id; this.hintT = 6;
     const el = $('hint');
-    el.textContent = Input.usedTouch || matchMedia('(pointer: coarse)').matches ? h.touch : h.keys;
+    const text = Input.usedTouch || matchMedia('(pointer: coarse)').matches ? h.touch : h.keys;
+    el.textContent = typeof text === 'function' ? text() : text;
     el.hidden = false;
     if (h.btn) $(h.btn).classList.add('pulse');
   },
@@ -563,6 +566,14 @@ const UI = {
     setTimeout(() => d.remove(), 2500);
   },
 
+  showAim(s) {
+    const base = $('aim-base');
+    if (!s) { base.hidden = true; return; }
+    base.hidden = false;
+    $('aim-ghost').hidden = true;
+    base.style.left = s.bx + 'px'; base.style.top = s.by + 'px';
+    $('aim-knob').style.transform = `translate(${s.x - s.bx}px, ${s.y - s.by}px)`;
+  },
   showStick(s) {
     const base = $('stick-base');
     if (!s) { base.hidden = true; return; }

@@ -1,8 +1,10 @@
 'use strict';
 // The autopilot: a page-side player for the tests. installBot (run in the
 // page) defines window.Bot, which plays through the same Input.bot interface
-// a thumb would: it steps the game synchronously, fights by keeping its
-// distance and standing still to hack, phases through packets about to land,
+// a thumb would: it steps the game synchronously, fights by holding the aim
+// stick on the nearest process (a human's aim wobbles; the aim assist
+// catches most of it) and stepping away from whatever gets close, phases
+// through packets about to land,
 // uses Bullet Time when it's charged and a fight is busy, decrypts caches,
 // equips whatever the compare verdict calls better, answers the phone and
 // takes the first patch offered. With god set, Neo can't die (to prove every
@@ -99,10 +101,11 @@ function installBot() {
       const run = Game.run, p = Game.player, room = Game.room;
       Input.bot = Input.bot || { x: 0, y: 0 };
       if (!run || run.ended) return 'ended';
+      Input.bot.aim = null;
       if (Game.modal) { if (!this.resolveModal()) return 'modal:' + Game.modal; return 'ok'; }
       if (Game.flow || Game.transition) { Input.bot.x = 0; Input.bot.y = 0; return 'ok'; }
       const live = Game.enemies.filter((e) => !e.dead && e.spawnT <= 0);
-      if (live.length || roomSealed()) return this.fight(live);
+      if (live.length || roomSealed()) { this.aimAt(live); return this.fight(live); }
       // loot on the floor
       const drop = Game.drops.find((d) => d.kind === 'item' && !d.blocked);
       if (drop) { const [dx, dy] = this.stepToward(drop.x, drop.y); this.go(dx, dy); return 'ok'; }
@@ -122,6 +125,22 @@ function installBot() {
       const [dx, dy] = this.stepToward(tx, ty);
       this.go(dx, dy);
       return 'ok';
+    },
+
+    // holds the aim stick towards the nearest process; with a skill model the
+    // aim is off by a few degrees, re-rolled every 0.3 s like a thumb's wobble
+    aimAt(live) {
+      const p = Game.player;
+      if (!live.length) return;
+      const t = chooseTarget(p);
+      if (!t) return;
+      let a = Math.atan2(t.y - t.h / 2 - (p.y - 7), t.x - p.x);
+      const sk = this.skill;
+      if (sk && sk.aimErr) {
+        if (!this.wobbleAt || Game.realT - this.wobbleAt > 0.3) { this.wobbleAt = Game.realT; this.wobble = (Math.random() * 2 - 1) * sk.aimErr * Math.PI / 180; }
+        a += this.wobble;
+      }
+      Input.bot.aim = [Math.cos(a), Math.sin(a)];
     },
 
     fight(live) {
@@ -159,9 +178,9 @@ function installBot() {
         return 'ok';
       }
       if (threat) { const a = Math.atan2(threat.vy, threat.vx) + Math.PI / 2; this.go(Math.cos(a), Math.sin(a)); return 'ok'; }
-      // stand and hack until something gets close; then step to the most open side
+      // hold position and hack until something gets close; then step to the most open side
       const melee = live.filter((e) => e.type !== 'firewall' && e.type !== 'exile');
-      const close = melee.filter((e) => dist(e.x, e.y, p.x, p.y) < 22);
+      const close = melee.filter((e) => dist(e.x, e.y, p.x, p.y) < 30);
       if (close.length) {
         let best = null, bs = -1;
         for (let k = 0; k < 16; k++) {

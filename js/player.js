@@ -1,14 +1,15 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Neo: moving, hacking (auto-firing at the nearest process while standing
-// still), Phase (the glitch-dash), Bullet Time, and taking hits. Neo runs on
-// real time: during Bullet Time the world slows and he doesn't.
+// Neo: moving, hacking (firing where the aim stick points, with aim assist,
+// while it's held), Phase (the glitch-dash), Bullet Time, and taking hits.
+// Neo runs on real time: during Bullet Time the world slows and he doesn't.
 // ---------------------------------------------------------------------------
 
 function makePlayer() {
   return {
     isPlayer: true, x: 0, y: 0, r: T.player.radius, vx: 0, vy: 0, facing: 1,
-    stillT: 0, moveT: 0, fireT: 0, shotCount: 0, echoT: -1, echoTarget: null,
+    moveT: 0, fireT: 0, fireHeldT: 0, shotCount: 0, echoT: -1, echoTarget: null, echoAng: 0,
+    aimAng: null, aimTarget: null, firing: false,
     phaseT: 0, phaseDir: [0, 0], phaseCdT: 0, phaseHits: null, phaseDropped: false,
     invulnT: 0, hurtT: 0, anim: 0, walkT: 0, coat: true, daemonA: 0, daemonT: 0,
     afterimages: [], hidden: false, regenAcc: 0,
@@ -53,7 +54,7 @@ function updatePlayer(dt) {
     if (Math.abs(mv.x) > 0.15) p.facing = mv.x > 0 ? 1 : -1;
     p.walkT += dt * (0.6 + Math.hypot(mv.x, mv.y));
   } else { p.vx = 0; p.vy = 0; }
-  if (moving || p.phaseT > 0) { p.stillT = 0; p.moveT += dt; } else { p.stillT += dt; p.moveT = 0; }
+  if (moving || p.phaseT > 0) p.moveT += dt; else p.moveT = 0;
 
   if (Game.scene !== 'run' || !run) return;
 
@@ -70,32 +71,70 @@ function updatePlayer(dt) {
   // the Daemon patch: a drone that orbits and fires on its own
   if (s.powers.daemon) updateDaemon(p, s, dt);
 
-  // hacking
+  // hacking: while the aim stick (or the arrows, or the mouse) is held
   const bt = !!Game.bt;
-  const canFire = bt || Save.settings.fireWhileMoving || (!moving && p.phaseT <= 0 && p.stillT >= T.player.fireDelay);
-  const target = Game.enemies.length ? chooseTarget(p) : null;
-  if (target && canFire && !Game.flow) {
-    if (target.x !== p.x) p.facing = target.x > p.x ? 1 : -1;
-    const compiling = p.stillT >= T.player.compileAfter && !bt;
+  const aim = Game.flow ? null : Input.aimVector(p);
+  const solved = aim ? solveAim(p, s, aim) : null;
+  p.aimAng = solved ? solved.ang : null;
+  p.aimTarget = solved ? solved.target : null;
+  if (solved) {
+    const { target, ang } = solved;
+    if (Math.abs(Math.cos(ang)) > 0.2) p.facing = Math.cos(ang) > 0 ? 1 : -1;
+    p.fireHeldT += dt;
+    // compiling: holding fire this long hacks faster, until you let go
+    const compiling = p.fireHeldT >= T.player.compileAfter && !bt;
     const rate = s.weapon.rate * (bt ? T.focus.fireRate : 1) * (compiling ? 1 + T.player.compileRate : 1);
     p.fireT -= dt;
     if (p.fireT <= 0) {
-      const movingShot = moving && !bt;
-      fireExploit(p, s, target, movingShot ? T.player.movingDamage : 1);
+      fireExploit(p, s, target, ang);
       p.fireT += 1 / rate;
       if (p.fireT < 0) p.fireT = 0;
-      if (s.powers.echo && run.rng.chance(0.2)) { p.echoT = 0.07; p.echoTarget = target; p.echoMult = movingShot ? T.player.movingDamage : 1; }
+      if (s.powers.echo && run.rng.chance(0.2)) { p.echoT = 0.07; p.echoTarget = target; p.echoAng = ang; }
     }
     p.firing = true;
   } else {
     p.firing = false;
-    // ready to fire the moment Neo stops
+    p.fireHeldT = 0;
+    // ready to fire the moment the aim stick is touched
     p.fireT = Math.min(p.fireT, 0.02);
   }
   if (p.echoT >= 0) {
     p.echoT -= dt;
-    if (p.echoT < 0 && p.echoTarget && !p.echoTarget.dead) fireExploit(p, s, p.echoTarget, p.echoMult, true);
+    if (p.echoT < 0 && (!p.echoTarget || !p.echoTarget.dead)) fireExploit(p, s, p.echoTarget, p.echoAng, 1, true);
   }
+}
+
+// What a held aim hits. Held without a direction: the nearest process.
+// With a direction: the live process closest to that line within the aim
+// assist cone (wider for homing exploits), else straight along it. Returns
+// null when there's nothing to fire at, { target, ang } otherwise.
+function solveAim(p, s, aim) {
+  const ox = p.x, oy = p.y - 7;
+  if (!aim.x && !aim.y) {
+    const t = Game.enemies.length ? chooseTarget(p) : null;
+    return t ? { target: t, ang: angleTo(ox, oy, t.x, t.y - (t.h || 8) / 2) } : null;
+  }
+  const want = Math.atan2(aim.y, aim.x);
+  const homing = s.weapon.pattern === 'homing' || s.powers.spoon;
+  const cone = Math.max(Save.settings.aimAssist ? T.player.aimAssist : 0, homing ? T.player.aimAssistHoming : 0) * Math.PI / 180;
+  let best = null, bs = Infinity;
+  if (cone > 0) {
+    for (const e of Game.enemies) {
+      if (e.dead || e.spawnT > 0 || e.untargetable) continue;
+      const ex = e.x, ey = e.y - (e.h || 8) / 2;
+      const d = dist(ox, oy, ex, ey);
+      if (d > T.player.aimRange) continue;
+      const diff = Math.abs(((angleTo(ox, oy, ex, ey) - want + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      if (diff > cone) continue;
+      if (!lineOfSight(Game.room, ox, oy, ex, ey)) continue;
+      const score = diff + d / 400; // closest to the line, then nearest
+      if (score < bs) { bs = score; best = e; }
+    }
+  }
+  if (!best) return { target: null, ang: want };
+  // homing exploits fire where you aim and curve in; the rest snap to the target
+  const snap = Save.settings.aimAssist || !homing;
+  return { target: best, ang: snap ? angleTo(ox, oy, best.x, best.y - (best.h || 8) / 2) : want };
 }
 
 function startPhase(p, s, dir) {
@@ -189,11 +228,16 @@ function updateBulletTime(dtReal) {
 // Firing. Every exploit fires glyphs from Neo's hands; the pattern decides how
 // many and how they fly. Extra projectiles deal 60% each.
 // ---------------------------------------------------------------------------
-function fireExploit(p, s, target, mult = 1, echo = false) {
+// Fires at `target` if there is one (homing shots chase it, lobs land on
+// it), along `ang` otherwise (a lob then lands up to 96 px away, short of a
+// wall).
+function fireExploit(p, s, target, ang, mult = 1, echo = false) {
   const run = Game.run, w = s.weapon;
   const ox = p.x + p.facing * 4, oy = p.y - 7;
-  const tx = target.x, ty = target.y - (target.h || 8) / 2;
-  const ang = angleTo(ox, oy, tx, ty);
+  if (target) ang = angleTo(ox, oy, target.x, target.y - (target.h || 8) / 2);
+  let tx, ty;
+  if (target) { tx = target.x; ty = target.y - (target.h || 8) / 2; }
+  else { const d = clamp(rayLength(Game.room, ox, oy, ang) - 6, 8, 96); tx = ox + Math.cos(ang) * d; ty = oy + Math.sin(ang) * d; }
   const dmg = w.dmg * mult;
   const exploit = run.gear.exploit;
   const color = exploit ? (exploit.rarity === 0 ? '#b8ffc8' : T.rarity.colors[exploit.rarity]) : '#b8ffc8';

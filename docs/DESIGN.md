@@ -29,6 +29,8 @@ This expands `VISION.md` into concrete features, numbers and screens. **After fo
 
 ## 2. Controls
 
+> **Superseded:** firing is now twin-stick (decision 36 in `DECISIONS.md`): the right half of the deck is an aim stick, holding it fires, and there is no stand-still firing or "fire while moving" setting. The text below is the original spec.
+
 | Action | Phone | Keyboard |
 |---|---|---|
 | Move | Drag the floating joystick | WASD / arrows |
