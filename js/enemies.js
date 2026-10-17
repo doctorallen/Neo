@@ -7,13 +7,14 @@
 // nothing attacks in its first second, and nothing out of view attacks at all.
 // ---------------------------------------------------------------------------
 
-const ENEMY_NAMES = { bug: 'bug', watchdog: 'watchdog.d', firewall: 'firewall.sys', sentinel: 'sentinel', worm: 'worm', exile: 'exile.exe', agent: 'agent', boss: 'agent', clone: 'agent' };
+const ENEMY_NAMES = { bug: 'bug', watchdog: 'watchdog.d', firewall: 'firewall.sys', sentinel: 'sentinel', worm: 'worm', exile: 'exile.exe', agent: 'agent', boss: 'agent', clone: 'agent', eye: 'harvester.exe' };
 const ELITE_NAMES = { sentinel: 'hypnos.d', worm: 'rem_cycle' };
 const MOD_NAMES = { encrypted: 'ENCRYPTED', overclocked: 'OVERCLOCKED', replicating: 'REPLICATING', volatile: 'VOLATILE' };
 // collision radius r (at the feet), body height h, hurt radius hr
 const BODY = {
   bug: { r: 3, h: 5, hr: 4 }, watchdog: { r: 5, h: 7, hr: 5 }, firewall: { r: 6, h: 10, hr: 6 }, sentinel: { r: 5, h: 10, hr: 6 },
   worm: { r: 4, h: 5, hr: 4 }, exile: { r: 4, h: 13, hr: 5 }, agent: { r: 4, h: 15, hr: 5 }, boss: { r: 5, h: 17, hr: 6 }, clone: { r: 4, h: 15, hr: 5 },
+  eye: { r: 6, h: 12, hr: 8 },
 };
 const SPAWN_WEIGHT = { bug: 3, watchdog: 3, firewall: 2, sentinel: 2.5, worm: 2, exile: 1.5 };
 
@@ -76,6 +77,7 @@ function planWaves(room) {
   const B = T.budget(n);
   const plan = { waves: [], elite: false, eliteMods: n >= 4 ? 2 : 1 };
   if (room.kind === 'boss') { plan.waves = [['boss']]; return plan; }
+  if (room.harvester) { plan.waves = [['harvester']]; return plan; }
   if (room.tutorial) { plan.waves = [['bug', 'bug', 'bug'], ['firewall']]; return plan; }
   if (room.kind === 'backdoor') {
     // the honeypot: one wave, two of them elite
@@ -102,13 +104,14 @@ function beginFight(room) {
   Sound.setTension(1);
   UI.feed(`> scan: ${room.fight.total} process${room.fight.total === 1 ? '' : 'es'}`);
   if (room.kind === 'boss') bossIntro(room);
+  if (room.harvester) harvesterIntro(room);
 }
 
 function updateFight(dt) {
   const room = Game.room, f = room && room.fight;
   if (!f || room.cleared) return;
   if (f.wave < 0) {
-    if (room.kind === 'boss' && room.introT > 0) { room.introT -= dt; return; }
+    if (room.introT > 0) { room.introT -= dt; return; }
     f.startT -= dt;
     // the very first fight waits for Neo to move (or three seconds), so the
     // first hint has a moment to land
@@ -129,7 +132,7 @@ function updateFight(dt) {
   if (Game.idleT > T.failsafe.idle) {
     Game.idleT = 0;
     for (const e of Game.enemies) {
-      if (e.dead || e.isBoss) continue;
+      if (e.dead || e.isBoss || e.fixed) continue;
       const pt = spawnPoint(room, Game.run.rng, []);
       if (pt) { e.x = pt.x; e.y = pt.y; e.spawnT = T.spawnTelegraph; e.graceT = T.spawnGrace; }
     }
@@ -143,6 +146,7 @@ function spawnWave(room, i) {
   let elitesLeft = f.plan.elite && i === 0 ? f.plan.elites || 1 : 0;
   for (const type of f.plan.waves[i]) {
     if (type === 'boss') { spawnBoss(room); continue; }
+    if (type === 'harvester') { spawnHarvester(room); continue; }
     const pt = spawnPoint(room, run.rng, taken) || room.centre();
     taken.push(pt);
     const e = makeEnemy(type, pt.x, pt.y, { wave: i });
@@ -177,6 +181,7 @@ function updateEnemies(dt) {
   if (Game.decoy) { Game.decoy.t -= dt; if (Game.decoy.t <= 0) Game.decoy = null; }
   const aimAt = Game.decoy || p;
   const slowAll = run.stats.powers.packetloss ? 0.85 : 1;
+  updateHarvester(dt, aimAt);
   for (const e of Game.enemies) {
     if (e.dead) { e.deadT += dt; continue; }
     e.anim += dt;
@@ -206,14 +211,15 @@ function updateEnemies(dt) {
       case 'exile': aiExile(e, aimAt, edt, canAttack); break;
       case 'agent': case 'clone': aiAgent(e, aimAt, mdt, edt, canAttack); break;
       case 'boss': aiBoss(e, aimAt, mdt, edt, canAttack); break;
+      case 'eye': aiEye(e, aimAt, edt); break;
     }
     // stuck inside something solid (a teleport gone wrong): out to the nearest floor
-    if (circleBlocked(room, e.x, e.y, e.r * 0.6, e)) {
+    if (!e.fixed && circleBlocked(room, e.x, e.y, e.r * 0.6, e)) {
       const f = nearestFloor(room, e.x / TILE, e.y / TILE);
       if (f) { e.x = (f[0] + 0.5) * TILE; e.y = (f[1] + 0.5) * TILE; }
     }
     // contact
-    if (e.graceT <= 0 && !(e.recoilT > 0) && e.type !== 'firewall' && e.type !== 'exile' && dist2(e.x, e.y, p.x, p.y) < (e.r + p.r + 1) ** 2) {
+    if (e.graceT <= 0 && !(e.recoilT > 0) && !e.noContact && e.type !== 'firewall' && e.type !== 'exile' && dist2(e.x, e.y, p.x, p.y) < (e.r + p.r + 1) ** 2) {
       const dmg = e.state === 'charge' ? e.dmg * 1.3 : e.dmg;
       damagePlayer(dmg, e.name);
       // bugs don't sit on him: each touch, hurt or not, sends them hopping back
@@ -221,7 +227,7 @@ function updateEnemies(dt) {
     }
   }
   // processes don't stack on top of each other
-  const live = Game.enemies.filter((e) => !e.dead && e.spawnT <= 0 && e.type !== 'firewall');
+  const live = Game.enemies.filter((e) => !e.dead && e.spawnT <= 0 && e.type !== 'firewall' && !e.fixed);
   for (let i = 0; i < live.length; i++)
     for (let j = i + 1; j < live.length; j++) {
       const a = live[i], b = live[j], min = a.r + b.r;
@@ -375,6 +381,8 @@ function aiExile(e, p, edt, canAttack) {
 // ---------------------------------------------------------------------------
 function damageEnemy(e, dmg, opts = {}) {
   if (e.dead || e.spawnT > 0) return;
+  // a shut eye: shots glance off
+  if (e.closed) { e.flashT = 0.04; Sound.play('shield', { vol: 0.25 }); return; }
   const run = Game.run, s = run.stats;
   let d = dmg;
   if (s.powers.kill9 && (e.elite || e.isAgent)) d *= 1.5;

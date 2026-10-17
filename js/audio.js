@@ -473,6 +473,19 @@ const Sound = (function () {
     tone(v, 'sawtooth', 220 * P, 200 * P, t, 0.18, 0.1, 0.01, lp); tone(v, 'sawtooth', 220 * P, 200 * P, t + 0.3, 0.18, 0.1, 0.01, lp);
     wet(v, 0.3);
   });
+  // the Harvester: the wall shaking before it breaks, and its laser
+  def('rumble', 2, (v, t, P) => {
+    noise(v, t, 1.8, 0.45, 'lowpass', 110 * P, 420 * P, 1, 1.3);
+    tone(v, 'sawtooth', 38 * P, 52 * P, t, 1.8, 0.14, 1.3, filter(v, 'lowpass', 220, 1));
+    wet(v, 0.3);
+  }, true);
+  def('laser', 2, (v, t, P) => {
+    const lp = filter(v, 'lowpass', 2400, 2);
+    tone(v, 'sawtooth', 880 * P, 110 * P, t, 0.55, 0.12, 0.005, lp);
+    tone(v, 'square', 1320 * P, 165 * P, t, 0.5, 0.05, 0.005, lp);
+    noise(v, t, 0.55, 0.18, 'bandpass', 3000 * P, 800 * P, 2);
+    wet(v, 0.3);
+  });
   def('victory', 2, (v, t, P) => {
     // a C major swell that resolves onto E major, the filter opening, then bells
     const c = E.ctx, T = t + 0.75, end = t + 4.2, lp = filter(v, 'lowpass', 300, 1.5), pg = c.createGain();

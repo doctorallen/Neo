@@ -304,6 +304,32 @@ async function desktop(browser) {
   check(aimed !== null && Math.cos(aimed) > 0, `desktop: the mouse aim points the wrong way (${aimed})`);
   await run(page, 0.2);
   check(!(await page.evaluate(() => Game.player.firing)), 'desktop: still hacking after the mouse button came up');
+  // the Harvester: breaks out of the wall, shuts a fired eye, falls when its three eyes do
+  const hv = await page.evaluate(() => {
+    UI.hide(); startRun({ seed: 7 }); startFloor(2); Game.debug.god = true;
+    const ex = Game.run.floor.exit; enterRoom(ex, Object.keys(ex.doors)[0]);
+    const out = { harvester: !!ex.harvester, waking: ex.harv && ex.harv.state };
+    for (let i = 0; i < 60 * 2.4; i++) Game.step(1 / 60);
+    const H = ex.harv;
+    out.fight = H.state; out.eyes = H.eyes.length;
+    eyeShut(H.eyes[0]); aiEye(H.eyes[0], Game.player, 0);
+    const hp = H.eyes[0].hp; damageEnemy(H.eyes[0], 50, { crit: false }); out.glanced = H.eyes[0].hp === hp;
+    eyeCharge(H.eyes[1], 'beam', Game.player);
+    for (let i = 0; i < 60 * 0.5; i++) Game.step(1 / 60);
+    out.beam = Game.hazards.some((h) => h.kind === 'beam');
+    Game.render();
+    return out;
+  });
+  await shot(page, 'smoke-desktop-harvester');
+  check(hv.harvester && hv.waking === 'waking' && hv.fight === 'fight' && hv.eyes === 3, `desktop: the Harvester didn't break out: ${JSON.stringify(hv)}`);
+  check(hv.glanced, 'desktop: a shut eye took damage');
+  check(hv.beam, 'desktop: the Harvester had no laser');
+  const hvEnd = await page.evaluate(() => {
+    for (const e of Game.room.harv.eyes) { e.closed = false; e.state = 'open'; damageEnemy(e, 1e6, { crit: false }); }
+    for (let i = 0; i < 60; i++) Game.step(1 / 60);
+    return { state: Game.room.harv.state, cleared: Game.room.cleared, prize: Game.drops.some((d) => d.kind === 'item' && d.item.rarity >= 2) };
+  });
+  check(hvEnd.state === 'dead' && hvEnd.cleared && hvEnd.prize, `desktop: the Harvester didn't fall properly: ${JSON.stringify(hvEnd)}`);
   // the Daily Trace: countermeasures stay out of it, and its result can be shared
   const daily = await page.evaluate(() => { Save.meta.maxDepth = 2; Save.meta.counter = { strictgc: true }; startRun({ seed: 5, daily: true }); const c = Game.run.counter.length; Game.run.killedBy = 'bug'; endRun(false); Save.meta.counter = {}; return { c, t: shareText(Game.run) }; });
   check(daily.c === 0, 'desktop: countermeasures leaked into the Daily Trace');

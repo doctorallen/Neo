@@ -55,6 +55,18 @@ The autopilot takes every Backdoor (honeypot or open port) and the first patch o
 
 The new power mostly pays off in later sectors, so steeper scaling per sector answers it without making sector 1 harder. Depth 3–5 with every upgrade hasn't been re-measured since. **Expect the Backdoor and the protocol powers to need tuning once a person plays:** a person won't take every Backdoor.
 
+### The Harvester, and a fix to aiming past pillars (decisions 48–49)
+
+32 seeds, fresh, "human" bot. The Harvester replaced sector 2's two-wave exit fight.
+
+| Tuning | Wins | Died at the Harvester | Notes |
+|---|---|---|---|
+| First pass (eyes 110, laser ×1.4, lasers 30/45/60%) | 10/32 | 11 of 32 | The laser did almost all the damage, about 25 a hit |
+| **Kept:** eyes 100, laser ×1.0, lasers 25/35/50%, a slower rhythm | 14/32 | 4 of 31 | |
+| …with line of sight fixed (decision 49) | 21/32 | 1 of 31 | |
+
+The last row isn't the game getting easier for a person. The old line-of-sight check passed a pillar's corner that every shot clipped. Aim assist snaps to the exact angle, so the bot could stand beside a pillar firing into its corner, and once that lasted 90 s. A person moves when their shots stop landing, so most of that jump is the bot no longer handicapping itself. Enemy numbers were left alone; the earlier 50% was measured with that handicap.
+
 ## What changed because of these numbers
 
 1. **Fights were too long.**

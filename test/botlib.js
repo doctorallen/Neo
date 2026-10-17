@@ -159,7 +159,7 @@ function installBot() {
         const t = -(rx * vx + ry * vy) / (v2 || 1);
         if (t < 0 || t > tmin) continue;
         const cx = rx + vx * t, cy = ry + vy * t;
-        if (cx * cx + cy * cy < 64) { tmin = t; threat = b; }
+        if (cx * cx + cy * cy < (b.r + 6) * (b.r + 6)) { tmin = t; threat = b; }
       }
       let near = null, nd = Infinity;
       for (const e of live) { const d = dist(e.x, e.y, p.x, p.y); if (d < nd) { nd = d; near = e; } }
@@ -171,6 +171,21 @@ function installBot() {
         Input.bot.phase = [Math.cos(a), Math.sin(a)];
       }
       if (run.focus >= T.focus.max && (live.length >= 3 || (Game.boss && !Game.boss.dead))) Input.bot.focus = true;
+      // the Harvester's laser: off its line while it shows (a human sees most of them)
+      const beam = Game.hazards.find((h) => {
+        if (h.kind !== 'beam' || h.t >= T.harvester.beam.tell + T.harvester.beam.fire) return false;
+        if (sk && (h._noticed === undefined ? (h._noticed = Math.random() < sk.notice) : !h._noticed)) return false;
+        if (sk && h.t < sk.react) return false;
+        const dx = p.x - h.x, dy = p.y - 4 - h.y, c = Math.cos(h.a), s = Math.sin(h.a);
+        return dx * c + dy * s > 0 && Math.abs(dy * c - dx * s) < h.w / 2 + 8;
+      });
+      if (beam) {
+        const c = Math.cos(beam.a), s = Math.sin(beam.a), side = (p.y - 4 - beam.y) * c - (p.x - beam.x) * s >= 0 ? 1 : -1;
+        let nx = -s * side, ny = c * side;
+        if (circleBlocked(Game.room, p.x + nx * 10, p.y + ny * 10, p.r + 1, p)) { nx = -nx; ny = -ny; }
+        this.go(nx, ny);
+        return 'ok';
+      }
       if (storm) {
         // out of the lit column, towards the nearer dark side
         const left = p.x - (storm.x0 - 4), right = storm.x1 + 4 - p.x;
@@ -197,7 +212,7 @@ function installBot() {
         }
       }
       // nothing in sight: get a line on the nearest
-      if (near && !lineOfSight(Game.room, p.x, p.y - 6, near.x, near.y - near.h / 2)) { const [dx, dy] = this.stepToward(near.x, near.y); this.go(dx, dy); return 'ok'; }
+      if (near && !lineOfSight(Game.room, ...muzzleFor(p, near.x, near.y - near.h / 2), near.x, near.y - near.h / 2)) { const [dx, dy] = this.stepToward(near.x, near.y); this.go(dx, dy); return 'ok'; }
       Input.bot.x = 0; Input.bot.y = 0;
       return 'ok';
     },

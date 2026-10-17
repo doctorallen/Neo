@@ -23,22 +23,36 @@ function spawnLob(x, y, tx, ty, dmg, radius, color, kernel) {
   Game.shots.push({ lob: true, sx: x, sy: y, tx, ty, x, y, t: 0, T: T_, dmg, radius, color, kernel, glyph: 7, hit: new Set(), trail: [] });
 }
 
-function spawnBullet(x, y, a, speed, dmg, src) {
-  const boss = Game.room && Game.room.kind === 'boss';
-  const cap = boss ? T.enemyBullet.maxAliveBoss : T.enemyBullet.maxAlive;
-  if (Game.bullets.length >= cap) return false;
+// opts: a big packet (the Harvester's) has r, life, and a ring of small
+// packets it bursts into when its life runs out or it meets a wall
+function spawnBullet(x, y, a, speed, dmg, src, opts = null) {
+  if (Game.bullets.length >= bulletCap()) return false;
   // Packet Acceleration, and an Unstable item's drawback
   const s = Game.run && Game.run.stats;
   speed *= 1 + (counterOn('fastpackets') ? 0.2 : 0) + (s ? s.packetSpeed : 0);
-  Game.bullets.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, dmg, src, r: T.enemyBullet.radius, life: 6 });
+  const b = { x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, dmg, src, r: T.enemyBullet.radius, life: 6 };
+  if (opts) { Object.assign(b, opts); b.big = true; }
+  Game.bullets.push(b);
   return true;
+}
+
+function bulletCap() {
+  const room = Game.room, boss = room && (room.kind === 'boss' || room.harvester);
+  return boss ? T.enemyBullet.maxAliveBoss : T.enemyBullet.maxAlive;
 }
 
 // a volley that fits under the cap, or nothing at all (a shooter at the cap skips its turn)
 function bulletRoom(n) {
-  const boss = Game.room && Game.room.kind === 'boss';
-  const cap = boss ? T.enemyBullet.maxAliveBoss : T.enemyBullet.maxAlive;
-  return Game.bullets.length + n <= cap;
+  return Game.bullets.length + n <= bulletCap();
+}
+
+// a big packet that didn't land bursts into a ring
+function popBullet(b) {
+  if (!b.ring) return;
+  const a0 = Math.random() * Math.PI * 2;
+  for (let i = 0; i < b.ring; i++) spawnBullet(b.x, b.y, a0 + (i / b.ring) * Math.PI * 2, b.ringSpeed, b.ringDmg, b.src);
+  spawnRing(b.x, b.y, ENEMY_BULLET, 10);
+  Sound.play('enemy_shot', { pitch: 0.7, vol: 0.6 });
 }
 
 function updateShots(dt) {
@@ -119,11 +133,16 @@ function updateBullets(dt) {
   for (const b of Game.bullets) {
     if (b.dead) continue;
     b.life -= dt;
-    if (b.life <= 0) { b.dead = true; continue; }
+    if (b.life <= 0) { b.dead = true; popBullet(b); continue; }
     const steps = Math.max(1, Math.ceil((Math.hypot(b.vx, b.vy) * dt) / 3));
     for (let k = 0; k < steps; k++) {
       b.x += (b.vx * dt) / steps; b.y += (b.vy * dt) / steps;
-      if (shotBlocked(room, b.x, b.y)) { b.dead = true; spawnBits(b.x, b.y, ENEMY_BULLET, 2); break; }
+      if (shotBlocked(room, b.x, b.y)) {
+        b.dead = true; spawnBits(b.x, b.y, ENEMY_BULLET, 2);
+        // back off the wall a little so the ring isn't born inside it
+        if (b.ring) { const v = Math.hypot(b.vx, b.vy) || 1; b.x -= (b.vx / v) * 4; b.y -= (b.vy / v) * 4; popBullet(b); }
+        break;
+      }
       if (dist2(b.x, b.y, p.x, p.y - 4) < (b.r + 4) * (b.r + 4)) {
         if (p.phaseT > 0) break; // phaseContacts deletes it
         if (damagePlayer(b.dmg, b.src)) b.dead = true;
@@ -167,6 +186,8 @@ function updateHazards(dt, dtReal) {
       if (h.t >= warn && !h.rained) { h.rained = true; Sound.play('glitch', { vol: 0.5 }); }
       if (h.t >= warn && h.t < warn + rain && p.x >= h.x0 && p.x < h.x1) damagePlayer(h.dmg, 'the code storm');
       if (h.t >= warn + rain) h.dead = true;
+    } else if (h.kind === 'beam') {
+      updateBeam(h, dt);
     } else if (h.kind === 'lane') {
       h.t -= dt; if (h.t <= 0) h.dead = true;
     }

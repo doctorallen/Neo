@@ -179,6 +179,7 @@ function drawRoom(ctx, room) {
   }
   // the doorway Neo came in by on the first floor, collapsing into code
   if (Game.arrivalCollapse > 0 && room.kind === 'entry' && Game.run && Game.run.floorN === 1) drawCollapse(ctx, room);
+  if (room.harvester) drawHarvester(ctx, room);
   drawHazardsUnder(ctx);
   // everything that stands, sorted by its feet
   const list = [];
@@ -226,6 +227,64 @@ function drawAim(ctx, p) {
     ctx.fillRect(Math.round(ox + c * d), Math.round(oy + s * d), 1, 1);
   }
   ctx.globalAlpha = 1;
+}
+
+// The Harvester: cracks spreading through the wall, then the machine in it
+// with its eyes, vents and scanner, then its wreck.
+function drawHarvester(ctx, room) {
+  const H = room.harv, S = SPR.harvester, t = Game.realT;
+  if (!H) { if (room.cleared) ctx.drawImage(S.wreck, 0, 0); return; }
+  if (H.state === 'waking') {
+    const k = clamp(H.t / T.harvester.intro, 0, 1), n = Math.floor(S.cracks.length * k);
+    for (let i = 0; i < n; i++) {
+      const [x, y] = S.cracks[i];
+      ctx.fillStyle = i > n - 12 ? '#ffffff' : (i * 7) % 5 ? '#ff4060' : '#ffb0c0';
+      ctx.fillRect(x, y, 1, 1);
+    }
+    return;
+  }
+  if (H.state === 'dead') {
+    ctx.drawImage(S.wreck, 0, 0);
+    // sparks from the empty sockets for a while
+    if (H.t < 6 && Math.random() < 0.3) for (const ex of HARVESTER_EYES) { ctx.fillStyle = Math.random() < 0.5 ? '#ffb43a' : '#ffffff'; ctx.fillRect(Math.round(ex - 4 + Math.random() * 8), Math.round(44 + Math.random() * 8), 1, 1); }
+    return;
+  }
+  ctx.drawImage(H.hurtT > 0 && Math.floor(t * 30) % 2 ? tintOf(S.body, '#ffffff') : S.body, 0, 0);
+  // the scanner sweeping its slot in the brow
+  const sx = 71 + Math.round((Math.sin(t * 2.2) * 0.5 + 0.5) * 48);
+  ctx.fillStyle = '#ff4060'; ctx.fillRect(sx - 1, 13, 4, 1);
+  ctx.fillStyle = '#ffd0d8'; ctx.fillRect(sx, 13, 2, 1);
+  // vents glow while they open
+  if (H.ventOpenT > 0) for (const vx of HARVESTER_VENTS) { ctx.globalAlpha = H.ventOpenT; ctx.fillStyle = '#ff4060'; ctx.fillRect(vx - 5, 42, 11, 4); ctx.globalAlpha = 1; }
+  const p = Game.player;
+  for (const e of H.eyes) drawHarvesterEye(ctx, e, p, t);
+}
+
+function drawHarvesterEye(ctx, e, p, t) {
+  const cx = e.x, cy = 48;
+  if (e.dead) {
+    ctx.fillStyle = '#000'; ellipseArea(ctx, cx, cy, 7, 6);
+    if (Math.random() < 0.25) { ctx.fillStyle = '#ffb43a'; ctx.fillRect(Math.round(cx - 4 + Math.random() * 8), Math.round(cy - 3 + Math.random() * 6), 1, 1); }
+    return;
+  }
+  // lids: shut, or opening in its first second
+  const lid = e.state === 'shut' ? 1 : e.graceT > 0 ? clamp(e.graceT / T.spawnGrace, 0, 1) : 0;
+  const charging = e.state === 'tell';
+  const hot = charging && Math.floor(t * (e.stateT < 0.3 ? 30 : 12)) % 2;
+  ctx.fillStyle = '#3a0010'; ellipseArea(ctx, cx, cy, 7, 6);
+  ctx.fillStyle = e.flashT > 0 ? '#ffffff' : hot ? '#ff8a9a' : '#a01028'; ellipseArea(ctx, cx, cy, 5, 4);
+  ctx.fillStyle = e.flashT > 0 ? '#ffffff' : hot ? '#ffffff' : '#ff2a4a'; ellipseArea(ctx, cx, cy, 3, 2);
+  // the pupil follows Neo
+  const a = angleTo(cx, cy, p.x, p.y - 6), px = Math.round(cx + Math.cos(a) * 2), py = Math.round(cy + Math.sin(a) * 1.5);
+  ctx.fillStyle = charging ? '#ffffff' : '#1a0006'; ctx.fillRect(px - 1, py - 1, 2, 3);
+  ctx.fillStyle = '#ffd0d8'; ctx.fillRect(cx - 3, cy - 3, 1, 1);
+  if (charging) { ctx.globalAlpha = 0.35 + 0.3 * Math.sin(t * 30); ctx.fillStyle = '#ff4060'; ellipseArea(ctx, cx, cy, 9, 8); ctx.globalAlpha = 1; }
+  if (lid > 0) {
+    const h = Math.ceil(7 * lid);
+    ctx.fillStyle = '#2c3450'; ctx.fillRect(cx - 7, cy - 6, 15, h); ctx.fillRect(cx - 7, cy + 7 - h, 15, h);
+    ctx.fillStyle = '#7684b4'; ctx.fillRect(cx - 6, cy - 6, 13, 1);
+    if (lid >= 1) { ctx.fillStyle = '#06080e'; ctx.fillRect(cx - 7, cy, 15, 1); }
+  }
 }
 
 function drawCollapse(ctx, room) {
@@ -309,6 +368,7 @@ function enemyImage(e) {
 function drawEnemy(ctx, e) {
   const flip = e.facing < 0;
   if (e.dead) return; // the dissolve takes over
+  if (e.type === 'eye') return; // drawn with the Harvester
   if (e.spawnT > 0) { drawSpawnGlitch(ctx, e); return; }
   // the worm's body first
   if (e.type === 'worm') {
@@ -480,7 +540,15 @@ function drawShots(ctx) {
 
 function drawBullets(ctx) {
   const img = bulletSprite();
-  for (const b of Game.bullets) ctx.drawImage(img, Math.round(b.x - img.ax), Math.round(b.y - img.ay));
+  for (const b of Game.bullets) {
+    if (!b.big) { ctx.drawImage(img, Math.round(b.x - img.ax), Math.round(b.y - img.ay)); continue; }
+    // a big packet, flickering as it's about to burst
+    const pop = b.ring && b.life < 0.35 && Math.floor(Game.realT * 24) % 2;
+    ctx.fillStyle = '#000'; ellipseArea(ctx, b.x, b.y, b.r + 1, b.r + 1);
+    ctx.fillStyle = pop ? '#ffffff' : '#a01028'; ellipseArea(ctx, b.x, b.y, b.r, b.r);
+    ctx.fillStyle = pop ? '#ffd0d8' : ENEMY_BULLET; ellipseArea(ctx, b.x, b.y, b.r - 1, b.r - 1);
+    ctx.fillStyle = '#ffd0d8'; ellipseArea(ctx, b.x - 1, b.y - 1, 1, 1);
+  }
 }
 
 function drawHazardsUnder(ctx) {
@@ -494,6 +562,18 @@ function drawHazardsUnder(ctx) {
       ctx.fillRect(0, -h.w / 2, h.len, h.w);
       ctx.globalAlpha = 0.8;
       ctx.fillRect(0, -h.w / 2, h.len * k, 1); ctx.fillRect(0, h.w / 2 - 1, h.len * k, 1);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    } else if (h.kind === 'beam' && h.t < T.harvester.beam.tell) {
+      // the laser's line: flickering, then steady once it has locked on
+      const C = T.harvester.beam, locked = h.t >= C.tell - C.lock;
+      ctx.save();
+      ctx.translate(h.x, h.y); ctx.rotate(h.a);
+      ctx.fillStyle = ENEMY_BULLET;
+      ctx.globalAlpha = locked ? 0.9 : 0.25 + 0.3 * Math.abs(Math.sin(h.t * 25));
+      ctx.fillRect(0, locked ? -1 : 0, h.len, locked ? 2 : 1);
+      ctx.globalAlpha = 0.12;
+      ctx.fillRect(0, -h.w / 2, h.len, h.w);
       ctx.restore();
       ctx.globalAlpha = 1;
     } else if (h.kind === 'volatile') {
@@ -530,6 +610,20 @@ function ellipseArea(ctx, cx, cy, rx, ry) {
 
 function drawHazardsOver(ctx) {
   for (const h of Game.hazards) {
+    if (h.kind === 'beam' && h.t >= T.harvester.beam.tell) {
+      // the laser itself: red, a hot core, and code boiling off it
+      const k = 1 - (h.t - T.harvester.beam.tell) / T.harvester.beam.fire, w = Math.max(2, Math.round(h.w * (0.6 + 0.4 * k)));
+      ctx.save();
+      ctx.translate(h.x, h.y); ctx.rotate(h.a);
+      ctx.fillStyle = ENEMY_BULLET; ctx.fillRect(0, -w / 2, h.len, w);
+      ctx.fillStyle = '#ffb0c0'; ctx.fillRect(0, -w / 4, h.len, Math.max(1, w / 2));
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, -0.5, h.len, 1);
+      ctx.restore();
+      const c = Math.cos(h.a), s = Math.sin(h.a);
+      for (let i = 0; i < 3; i++) { const d = Math.random() * h.len; ctx.fillStyle = Math.random() < 0.5 ? '#ffffff' : ENEMY_BULLET; ctx.fillRect(Math.round(h.x + c * d + (Math.random() - 0.5) * w * 2), Math.round(h.y + s * d + (Math.random() - 0.5) * w * 2), 1, 1); }
+      if (Math.random() < 0.5) spawnBits(h.x + c * h.len, h.y + s * h.len, ENEMY_BULLET, 1);
+      continue;
+    }
     if (h.kind === 'storm' && h.t >= T.boss.stormWarn) {
       const room = Game.room, top = TILE, bottom = (room.h - 1) * TILE;
       for (let x = h.x0; x < h.x1; x += 4) {
@@ -589,6 +683,18 @@ function drawOverlays(ctx, W, H) {
     ctx.fillStyle = '#3a0c14'; ctx.fillRect(x, y + 8, w, 2);
     ctx.fillStyle = '#ff8a5a'; ctx.fillRect(x, y + 8, Math.round(w * boss.hp / boss.maxHp), 2);
     ctx.fillStyle = '#000'; for (const f of [T.boss.phase2, T.boss.phase3]) ctx.fillRect(x + Math.round(w * f), y + 7, 1, 4);
+  }
+  // the Harvester's bar: one piece for each eye
+  const hv = Game.room && Game.room.harv;
+  if (hv && hv.state === 'fight') {
+    const w = W - 40, x = 20, y = 4, seg = Math.floor((w - 4) / 3);
+    drawText3(ctx, 'HARVESTER', W / 2, y, '#e8ffe8', { align: 'center' });
+    hv.eyes.forEach((e, i) => {
+      const sx = x + i * (seg + 2);
+      ctx.fillStyle = '#000'; ctx.fillRect(sx - 1, y + 7, seg + 2, 4);
+      ctx.fillStyle = '#3a0c14'; ctx.fillRect(sx, y + 8, seg, 2);
+      ctx.fillStyle = e.closed ? '#7684b4' : '#ff8a5a'; ctx.fillRect(sx, y + 8, Math.round(seg * Math.max(0, e.hp) / e.maxHp), 2);
+    });
   }
   // Bullet Time: the world drains to green
   if (Game.timeScale < 0.999) {

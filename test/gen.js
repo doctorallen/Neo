@@ -70,6 +70,18 @@ for (let s = 1; s <= seeds; s++) {
       const host = Object.values(b.doors)[0].to;
       if (host.kind !== 'combat' || Object.values(b.doors).length !== 1 || Object.values(b.doors)[0].hidden) failures.push(`${where}: a backdoor that isn't a dead end off a fight`);
     }
+    // the Harvester's room: sector 2's exit, never entered from the north,
+    // its top two rows wall, the row under them clear for the eyes
+    const harv = f.rooms.filter((r) => r.harvester);
+    if (harv.length !== (recipe.harvester ? 1 : 0) || (harv[0] && harv[0] !== f.exit)) failures.push(`${where}: ${harv.length} Harvester rooms`);
+    for (const r of harv) {
+      if (r.doors.n) failures.push(`${where}: the Harvester's room has a north door`);
+      for (let tx = 1; tx < r.w - 1; tx++) {
+        if (r.t(tx, 1) !== N.WALL || r.t(tx, 2) !== N.WALL) failures.push(`${where}: the Harvester's wall is open at ${tx}`);
+        if (r.t(tx, 3) !== N.FLOOR) failures.push(`${where}: the row under the Harvester is blocked at ${tx}`);
+      }
+      if (!r.props.some((p) => p.kind === 'phone') || r.wallDecor.length) failures.push(`${where}: the Harvester's room is furnished wrong`);
+    }
     // doors agree and match the grid
     for (const r of f.rooms) {
       for (const [d, link] of Object.entries(r.doors)) {

@@ -60,7 +60,7 @@ class Room {
 function buildRoomTiles(room, rng) {
   const set = ROOM_TEMPLATES[room.size];
   const ti = rng.i(0, set.length - 1);
-  const mx = rng.chance(0.5), my = rng.chance(0.5);
+  const mx = rng.chance(0.5), my = rng.chance(0.5) && room.size !== 'harvester';
   room.template = `${room.size}:${ti}${mx ? 'x' : ''}${my ? 'y' : ''}`;
   fillRoomTiles(room, set[ti], mx, my);
 }
@@ -75,7 +75,7 @@ function fillRoomTiles(room, tpl, mx, my) {
       let v = WALL;
       if (tx > 0 && ty > 0 && tx < w - 1 && ty < h - 1) {
         const ch = rows[ty - 1][tx - 1];
-        v = ch === 'o' ? BLOCK : ch === 'p' ? PIT : FLOOR;
+        v = ch === 'o' ? BLOCK : ch === 'p' ? PIT : ch === 'x' ? WALL : FLOOR;
       }
       room.set(tx, ty, v);
     }
@@ -151,9 +151,11 @@ function generateFloor(seed, n) {
     let ok = true;
     for (let i = 1; i < length && ok; i++) {
       const [cx, cy] = cells[cells.length - 1];
-      // never south from the entry: you arrived from the south
+      // never south from the entry: you arrived from the south; and never
+      // into the Harvester's room from the north, where it sits
       const opts = ['n', 'e', 'w', 's'].filter((d) => {
         if (i === 1 && d === 's') return false;
+        if (i === length - 1 && recipe.harvester && d === 's') return false;
         const nx = cx + DIRS[d][0], ny = cy + DIRS[d][1];
         return nx >= 0 && ny >= 0 && nx < GRID && ny < GRID && !used.has(nx + ',' + ny);
       });
@@ -172,9 +174,10 @@ function generateFloor(seed, n) {
     const [gx, gy] = path[i];
     let kind, size;
     if (i === 0) { kind = 'entry'; size = 'small'; }
-    else if (i === path.length - 1) { kind = boss ? 'boss' : 'exit'; size = boss ? 'arena' : 'large'; }
+    else if (i === path.length - 1) { kind = boss ? 'boss' : 'exit'; size = boss ? 'arena' : recipe.harvester ? 'harvester' : 'large'; }
     else { kind = 'combat'; size = rng.chance(recipe.largeChance) ? 'large' : 'std'; }
     const r = add(gx, gy, kind, size);
+    if (size === 'harvester') r.harvester = true;
     if (i > 0) {
       const [px, py] = path[i - 1];
       const dir = Object.keys(DIRS).find((d) => px + DIRS[d][0] === gx && py + DIRS[d][1] === gy);
@@ -246,7 +249,7 @@ function furnish(r, rng, floor) {
   // whatever suits the sector elsewhere, never over a door
   const nDoor = !!r.doors.n;
   const spots = [1, 2, 3, 8, 9, 10].filter((tx) => !(nDoor && (tx === 4 || tx === 5 || tx === 6 || tx === 7)));
-  if (r.kind !== 'rabbit' && spots.length) {
+  if (r.kind !== 'rabbit' && !r.harvester && spots.length) {
     if (floor.sector === 'tenement' && rng.chance(0.22)) r.wallDecor.push({ kind: 'mirror', tx: rng.pick(spots) });
     else if (rng.chance(0.6)) r.wallDecor.push({ kind: 'sign', tx: rng.pick(spots) });
   }

@@ -22,6 +22,7 @@ Every fight is a hack. Processes guard each room; you terminate them with exploi
 - **Caches:** stand in the ring to decrypt one, then choose one of the items inside.
 - **Loot:** walk over loot once the room is clear to compare it with what you're wearing, then EQUIP or SCRAP it for Data. Commons are auto-scrapped by default (see Settings).
 - **Payphones:** the ringing payphone is the exit. Answer it to choose a patch and go deeper.
+- **The Harvester:** something waits in the wall of sector 2's last room. Shoot out its three eyes. An eye that has just fired shuts for a moment and shots glance off it. Its laser shows its line first, and pillars stop it.
 - **Protocols:** every patch and Zero-Day belongs to one of four protocols: KERNEL, NETWORK, CRYPTO or GHOST. Two different pieces of one give a small bonus; three give its power (Root Shell, Botnet, Zero Trust, Ghost in the Shell). Patch offers lean towards the protocols you run. LOADOUT shows your progress.
 - **Backdoors:** sectors 2–4 usually have an optional orange room off a fight. The terminal feed tells you which kind it is before you go in. A *honeypot* is a fight with two elites for an Epic-or-better prize. An *open port* sells a patch for 15% of your max integrity, for the rest of the run.
 - **Unstable items:** some Rares and Epics carry a big upside with a real drawback (damage taken, faster enemy packets, a longer phase cooldown or less integrity). If you haven't seen a Rare by the second sector's cache, that cache guarantees one.
@@ -56,6 +57,7 @@ Plain JavaScript, with no build step and no runtime dependencies. Classic script
 | `js/shots.js` | Glyph shots, enemy packets, hazards |
 | `js/enemies.js` | Wave planning, spawning, every process's AI, elites, damage, drops |
 | `js/boss.js` | Agents: the mini-boss and the Agent |
+| `js/harvester.js` | The Harvester, the machine in the wall of sector 2's last room |
 | `js/interact.js` | Loot pickup, caches, the Oracle, the payphone, the white rabbit and the black cat |
 | `js/hub.js` | The apartment, the cold open and the transmissions |
 | `js/fx.js` | Particles, damage numbers, flashes |

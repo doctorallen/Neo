@@ -1365,6 +1365,69 @@ function sectorTiles(sector) {
 // ---------------------------------------------------------------------------
 // Build everything
 // ---------------------------------------------------------------------------
+// The Harvester: a machine as wide as a room, broken out of the north wall.
+// The body is drawn once; its eyes, vents and scanner are drawn live over it
+// (render.js), since they open, shut and glow. Also the same body as a dark
+// wreck, and the cracks that spread through the wall before it breaks out,
+// in the order they appear.
+function spr_harvester() {
+  const W = 192, H = 60;
+  const m = ['#06080e', '#10141e', '#1c2234', '#2c3450', '#46507a', '#7684b4'];
+  const rock = ['#161c20', '#2e373c', '#4b5960'];
+  const P = spr_paint(W, H);
+  const top = (x) => 2 + (hashInts(x >> 2, 77) % 4); // a ragged edge in 4 px steps
+  const x0 = 10, x1 = 181;
+  for (let x = x0; x <= x1; x++) {
+    const t = top(x) + (x < x0 + 4 || x > x1 - 4 ? 3 : 0);
+    P.r(m[1], x, t + 2, 1, 46 - t);
+    P.r(rock[2], x, t, 1, 1); P.r(rock[1], x, t + 1, 1, 1);
+  }
+  // ragged sides where it tore through the side walls
+  for (let y = 4; y < 48; y++) { const j = hashInts(y >> 2, 91) % 3; P.r(rock[1], x0 - j, y, j + 1, 1); P.r(rock[1], x1, y, j + 1, 1); P.r(rock[2], x0 - j, y, 1, 1); P.r(rock[2], x1 + j, y, 1, 1); }
+  // the brow: a heavy plate with rivets, and the scanner's slot
+  P.r(m[3], 14, 9, W - 28, 9); P.r(m[4], 14, 9, W - 28, 1); P.r(m[0], 14, 17, W - 28, 1);
+  for (let x = 20; x < W - 18; x += 12) { P.r(m[5], x, 11, 1, 1); P.r(m[1], x, 12, 1, 1); }
+  P.r(m[0], 70, 12, 52, 3); P.r('#3a0612', 71, 13, 50, 1);
+  // ribbed panels down to the jaw
+  for (let x = 14; x < W - 14; x += 6) {
+    P.r(m[2], x, 19, 5, 21);
+    P.r(m[3], x, 19, 1, 21);
+    P.r(m[0], x + 5, 19, 1, 21);
+    if ((x / 6) % 3 === 1) P.r('#3a0612', x + 2, 22, 1, 2);
+  }
+  // cables hanging from under the brow
+  for (const cx of [30, 62, 128, 162]) for (let y = 18; y < 40; y++) P.r(m[0], cx + Math.round(Math.sin(y * 0.35 + cx) * 1.5), y, 2, 1);
+  // the jaw: a lip with a grille
+  P.r(m[3], 12, 40, W - 24, 8); P.r(m[4], 12, 40, W - 24, 1); P.r(m[0], 12, 47, W - 24, 1);
+  for (let x = 14; x < W - 14; x += 4) P.r(m[1], x, 42, 1, 4);
+  // the two vents the bugs come out of
+  for (const vx of [74, 118]) { P.r(m[0], vx - 6, 41, 13, 6); for (let x = vx - 5; x <= vx + 5; x += 2) P.r(m[3], x, 42, 1, 4); }
+  // the eye housings, hanging below the wall line, each with its dark socket
+  for (const ex of [52, 96, 140]) {
+    P.disc(ex, 48, 12, 10, [m[1], m[2], m[3], m[4], m[5]]);
+    P.disc(ex, 48.5, 8.5, 7, [m[0], m[0], m[1]]);
+    P.r(m[0], ex - 12, 48, 1, 1); P.r(m[0], ex + 12, 48, 1, 1);
+  }
+  const body = P.c;
+  const [wreck, wx] = makeCanvas(W, H);
+  wx.drawImage(body, 0, 0);
+  wx.globalCompositeOperation = 'source-atop';
+  wx.fillStyle = 'rgba(0,0,0,0.55)'; wx.fillRect(0, 0, W, H);
+  wx.globalCompositeOperation = 'source-over';
+  for (const ex of [52, 96, 140]) { wx.fillStyle = '#000'; wx.fillRect(ex - 7, 43, 15, 11); wx.fillRect(ex - 5, 41, 11, 15); }
+  // cracks: random walks up from where the eyes will break through
+  const rnd = mulberry32(0x4a7e), walks = [];
+  for (const sx of [52, 96, 140, 30, 74, 118, 162]) walks.push({ x: sx, y: 46, list: [] });
+  for (let step = 0; step < 34; step++)
+    for (const w of walks) {
+      w.y -= rnd() < 0.6 ? 1 : 0; w.x += rnd() < 0.5 ? -1 : 1;
+      if (w.y > 3 && w.x > 12 && w.x < W - 12) w.list.push([w.x, w.y]);
+    }
+  const cracks = [];
+  for (let i = 0; i < 34; i++) for (const w of walks) if (w.list[i]) cracks.push(w.list[i]);
+  return { body, wreck, cracks };
+}
+
 function buildSprites() {
   const rabbit = spr_rabbit();
   Object.assign(SPR, {
@@ -1379,6 +1442,7 @@ function buildSprites() {
       agent: spr_agentSet(false),
     },
     boss: spr_agentSet(true),
+    harvester: spr_harvester(),
     rabbit: rabbit.frames,
     rabbitTail: rabbit.tail,
     cat: spr_cat(),

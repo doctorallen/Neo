@@ -758,6 +758,7 @@ function traceTip(kind) {
     [/worm/, 'worms split when they die: back off before the last hit'],
     [/exile/, 'exile.exe blinks, then fires a wide fan: phase into the spread'],
     [/agent/i, 'agents dodge one shot, then pause: fire a burst, then keep firing'],
+    [/harvester/, "harvester.exe's laser shows its line first: step off it, or behind a pillar. Shoot the eyes that are open"],
     [/storm/, 'the code storm lights three columns: watch the warning and stand in a dark lane'],
     [/volatile/, 'volatile processes burst when they die: step out of the ring'],
   ];

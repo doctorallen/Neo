@@ -9,6 +9,8 @@
 //   small  10×9   (entry rooms, side rooms)        → a 12×11 room
 //   std    10×11  (most combat rooms)              → a 12×13 room
 //   large  10×13  (exit-room fights, the arena)    → a 12×15 room
+//   harvester 10×13, the top two rows wall ('x'): the Harvester sits in
+//          them, so it is never mirrored top to bottom → a 12×15 room
 // Rooms are kept short so that on a phone in Safari, with the address bar
 // showing, a whole room fits on screen and nothing attacks from out of view.
 // ---------------------------------------------------------------------------
@@ -287,6 +289,36 @@ const ROOM_TEMPLATES = {
      '..........',
      '..........'],
   ],
+  // The Harvester's room: its body fills the top two rows; low pillars give
+  // cover from the laser.
+  harvester: [
+    ['xxxxxxxxxx',
+     'xxxxxxxxxx',
+     '..........',
+     '..........',
+     '..........',
+     '..........',
+     '.o......o.',
+     '..........',
+     '..........',
+     '..........',
+     '..........',
+     '..........',
+     '..........'],
+    ['xxxxxxxxxx',
+     'xxxxxxxxxx',
+     '..........',
+     '..........',
+     '..........',
+     '..........',
+     '..........',
+     '...o..o...',
+     '..........',
+     '..........',
+     '..........',
+     '..........',
+     '..........'],
+  ],
   // The Agent's arena: open, with four pillars for cover.
   arena: [
     ['..........',
@@ -306,4 +338,4 @@ const ROOM_TEMPLATES = {
 };
 
 // The size class of each template set, in whole-room tiles (walls included).
-const ROOM_SIZE = { small: [12, 11], std: [12, 13], large: [12, 15], arena: [12, 15] };
+const ROOM_SIZE = { small: [12, 11], std: [12, 13], large: [12, 15], arena: [12, 15], harvester: [12, 15] };

@@ -9,10 +9,11 @@
 const T = {
   // The five floors: how many fights stand between the entry and the exit,
   // how often a fight is in a large room, the optional side rooms, and how
-  // many processes may be alive at once in a wave.
+  // many processes may be alive at once in a wave. harvester: the exit room
+  // is the Harvester's.
   floors: [
     { sector: 'tenement', combat: 1, largeChance: 0, cache: true, oracle: 0.4, rabbit: 0.25, alive: 4 },
-    { sector: 'server', combat: 2, largeChance: 0.2, cache: true, oracle: 0.4, rabbit: 0.25, backdoor: 0.8, alive: 5 },
+    { sector: 'server', combat: 2, largeChance: 0.2, cache: true, oracle: 0.4, rabbit: 0.25, backdoor: 0.8, alive: 5, harvester: true },
     { sector: 'subway', combat: 2, largeChance: 0.3, cache: true, oracle: 0.4, rabbit: 0.25, backdoor: 0.8, alive: 6 },
     { sector: 'grid', combat: 2, largeChance: 0.35, cache: true, oracle: 0.4, rabbit: 0.25, backdoor: 0.8, alive: 6 },
     { sector: 'core', combat: 0, largeChance: 0, cache: false, oracle: 0, rabbit: 0, alive: 6 },
@@ -78,6 +79,22 @@ const T = {
     cloneEvery: 9, clonesMax: 2, cloneHp: 60, cloneBullet: 75,
     ringEvery: 3, ringShots: 10, ringTurn: 18, ringBullet: 50,
     stormEvery: 5, stormWarn: 0.9, stormRain: 0.6, stormCols: 3, stormDmg: 14,
+  },
+
+  // The Harvester, guarding the payphone in sector 2: a machine as wide as
+  // the room that breaks out of the north wall. Its three eyes are the only
+  // targets. An eye that has just fired shuts for a moment and shots glance
+  // off it. Its attacks: a big slow packet that bursts into a ring if it
+  // doesn't land, and a laser that shows its line first. With one eye lost,
+  // vents between the eyes let out bugs; with two lost, the laser follows
+  // Neo. dmg multipliers are of its base dmg, scaled by sector like any process.
+  harvester: {
+    eyeHp: 100, dmg: 12, intro: 1.8,
+    every: [1.6, 1.3, 1.0], beamChance: [0.25, 0.35, 0.5], // by eyes lost
+    orb: { tell: 0.6, speed: 52, r: 5, life: 1.7, dmg: 1.2, ring: 8, ringSpeed: 58, ringDmg: 0.6 },
+    beam: { tell: 0.9, lock: 0.25, fire: 0.55, w: 8, dmg: 1.0, sweep: 22 }, // sweep in degrees/s, last eye only
+    shut: 1.3, shutLast: 1.0,
+    vents: { every: 6.5, bugs: 2, max: 3 },
   },
 
   elite: {

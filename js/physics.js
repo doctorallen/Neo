@@ -63,8 +63,10 @@ function shotBlocked(room, x, y) {
 }
 
 // Clear line between two points, for shots (pits don't block it).
+// Sampled every 2 px: shots step up to 4 px, and a coarser line could pass
+// a pillar's corner that every shot clips.
 function lineOfSight(room, ax, ay, bx, by) {
-  const d = dist(ax, ay, bx, by), n = Math.ceil(d / 4);
+  const d = dist(ax, ay, bx, by), n = Math.ceil(d / 2);
   for (let i = 1; i < n; i++) {
     const t = i / n;
     if (shotBlocked(room, lerp(ax, bx, t), lerp(ay, by, t))) return false;

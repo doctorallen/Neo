@@ -16,14 +16,23 @@ function makePlayer() {
   };
 }
 
+// Where a shot at (tx, ty) leaves from: the hand on that side (fireExploit
+// turns him to face his aim first). Line-of-sight checks for aiming start
+// here, so they test the line the shots will fly.
+function muzzleFor(p, tx, ty) {
+  const c = Math.cos(angleTo(p.x, p.y - 7, tx, ty));
+  return [p.x + (Math.abs(c) > 0.2 ? (c > 0 ? 1 : -1) : p.facing) * 4, p.y - 7];
+}
+
 // The nearest live process Neo can see; failing that, the nearest at all.
 function chooseTarget(p) {
   let best = null, bd = Infinity, bestSeen = null, bsd = Infinity;
   for (const e of Game.enemies) {
     if (e.dead || e.spawnT > 0 || e.untargetable) continue;
-    const d = dist2(p.x, p.y, e.x, e.y);
+    // a shut eye only when nothing else is there
+    const d = dist2(p.x, p.y, e.x, e.y) + (e.closed ? 1e6 : 0);
     if (d < bd) { bd = d; best = e; }
-    if (d < bsd && lineOfSight(Game.room, p.x, p.y - 6, e.x, e.y - e.h / 2)) { bsd = d; bestSeen = e; }
+    if (d < bsd && lineOfSight(Game.room, ...muzzleFor(p, e.x, e.y - e.h / 2), e.x, e.y - e.h / 2)) { bsd = d; bestSeen = e; }
   }
   return bestSeen || best;
 }
@@ -129,8 +138,8 @@ function solveAim(p, s, aim) {
       if (d > T.player.aimRange) continue;
       const diff = Math.abs(((angleTo(ox, oy, ex, ey) - want + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
       if (diff > cone) continue;
-      if (!lineOfSight(Game.room, ox, oy, ex, ey)) continue;
-      const score = diff + d / 400; // closest to the line, then nearest
+      if (!lineOfSight(Game.room, ...muzzleFor(p, ex, ey), ex, ey)) continue;
+      const score = diff + d / 400 + (e.closed ? 1 : 0); // closest to the line, then nearest; open eyes first
       if (score < bs) { bs = score; best = e; }
     }
   }
