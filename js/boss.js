@@ -16,7 +16,7 @@ function setupAgent(e) {
   e.burstLeft = 0;
   e.burstGapT = 0;
   if (e.type === 'clone') {
-    e.maxHp = e.hp = T.boss.cloneHp * (1 + 0.25 * (Game.run.depth - 1));
+    e.maxHp = e.hp = T.boss.cloneHp * (1 + T.depth.hp * (Game.run.depth - 1));
     e.onDeath = (c) => { spawnDissolve(c); Sound.play('kill', { vol: 0.5 }); };
     return;
   }

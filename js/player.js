@@ -279,7 +279,7 @@ function damagePlayer(amount, source) {
     }
     if (Save.rank('revive') && !run.reviveUsed) {
       run.reviveUsed = true;
-      run.hp = Math.round(s.maxHp * 0.5);
+      run.hp = Math.round(s.maxHp * 0.4);
       p.invulnT = 1.5;
       Game.bullets = [];
       spawnRing(p.x, p.y - 6, '#ffffff', 60);

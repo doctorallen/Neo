@@ -22,7 +22,7 @@ function makeEnemy(type, x, y, opts = {}) {
   const base = T.enemies[type] || (type === 'agent' ? T.agent : type === 'boss' ? T.boss : T.agent);
   const body = BODY[type] || BODY.agent;
   const spoon = run.spoonFloor === n ? 1.1 : 1;
-  const hp = (opts.hp || base.hp) * (type === 'boss' ? (1 + 0.25 * (d - 1)) : T.enemyHp(n, d)) * spoon;
+  const hp = (opts.hp || base.hp) * (type === 'boss' ? (1 + T.depth.hp * (d - 1)) : T.enemyHp(n, d)) * spoon;
   const e = {
     type, x, y, r: body.r, h: body.h, hr: body.hr, hp, maxHp: hp,
     dmg: (opts.dmg || base.dmg) * T.enemyDmg(n, d), speed: base.speed || 0,

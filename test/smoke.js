@@ -86,7 +86,7 @@ async function phone(browser) {
   await shot(page, 'smoke-entry');
   // the HUD
   const hp = await page.evaluate(() => document.getElementById('hp-text').textContent);
-  check(hp === '110', `phone: integrity shows ${hp}, expected 110 with one Hardened Kernel`);
+  check(hp === '108', `phone: integrity shows ${hp}, expected 108 with one Hardened Kernel`);
   // pause, loadout, settings
   await tap(page, '#btn-pause');
   check(await visible(page, 'screen-pause'), 'phone: pause did not open');

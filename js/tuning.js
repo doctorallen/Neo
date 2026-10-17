@@ -53,8 +53,8 @@ const T = {
   },
 
   // Enemy scaling by floor (n from 1) and depth (d from 1).
-  enemyHp: (n, d) => (1 + 0.35 * (n - 1)) * (1 + 0.25 * (d - 1)),
-  enemyDmg: (n, d) => 1.1 * (1 + 0.3 * (n - 1)) * (1 + 0.15 * (d - 1)),
+  enemyHp: (n, d) => (1 + 0.35 * (n - 1)) * (1 + T.depth.hp * (d - 1)),
+  enemyDmg: (n, d) => 1.1 * (1 + 0.3 * (n - 1)) * (1 + T.depth.dmg * (d - 1)),
 
   enemyBullet: { radius: 2, maxAlive: 18, maxAliveBoss: 30 },
   spawnTelegraph: 0.6, spawnGrace: 1.0, spawnMinDist: 56,
@@ -109,16 +109,17 @@ const T = {
 
   // The permanent upgrades at the desk terminal: cost of each rank.
   upgrades: [
-    { id: 'hp', name: 'Hardened Kernel', desc: '+10 max integrity', costs: [25, 60, 120, 200, 300] },
-    { id: 'dmg', name: 'Optimised Code', desc: '+6% damage', costs: [30, 70, 140, 230, 350] },
-    { id: 'rate', name: 'Overclocked Bus', desc: '+6% attack speed', costs: [40, 120, 250] },
+    { id: 'hp', name: 'Hardened Kernel', desc: '+8 max integrity', costs: [25, 60, 120, 200, 300] },
+    { id: 'dmg', name: 'Optimised Code', desc: '+5% damage', costs: [30, 70, 140, 230, 350] },
+    { id: 'rate', name: 'Overclocked Bus', desc: '+5% attack speed', costs: [40, 120, 250] },
     { id: 'luck', name: 'Lucky Packets', desc: '+12% item rarity', costs: [35, 100, 200] },
     { id: 'data', name: 'Data Miner', desc: '+15% Data', costs: [30, 80, 160] },
-    { id: 'boot', name: 'Bootstrap', desc: 'Start with an Uncommon, then a Rare, exploit', costs: [80, 250] },
+    { id: 'boot', name: 'Bootstrap', desc: 'Start with an Uncommon, then a Rare, exploit', costs: [100, 280] },
     { id: 'prefocus', name: 'Preloaded Focus', desc: 'Start each floor with 50% focus', costs: [150] },
     { id: 'reroll', name: 'Patch Reroll', desc: 'Reroll the patch choices once per pick', costs: [180] },
-    { id: 'revive', name: 'Déjà Vu', desc: 'Once a run, come back at 50% integrity', costs: [500] },
+    { id: 'revive', name: 'Déjà Vu', desc: 'Once a run, come back at 40% integrity', costs: [500] },
   ],
 
-  depth: { max: 5, hp: 0.25, dmg: 0.15, luck: 0.15, data: 0.2 },
+  // each Depth past the first: processes tougher and harder-hitting, loot rarer, more Data
+  depth: { max: 5, hp: 0.4, dmg: 0.25, luck: 0.15, data: 0.2 },
 };

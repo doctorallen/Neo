@@ -200,9 +200,9 @@ function computeStats(gear, patches, floorN = 1) {
   if (pill === 'red') { s.dmg += 0.15; s.maxHp -= 15; }
   if (pill === 'blue') s.maxHp += 20;
   // permanent upgrades and the depth
-  s.maxHp += 10 * Save.rank('hp');
-  s.dmg += 0.06 * Save.rank('dmg');
-  s.rate += 0.06 * Save.rank('rate');
+  s.maxHp += 8 * Save.rank('hp');
+  s.dmg += 0.05 * Save.rank('dmg');
+  s.rate += 0.05 * Save.rank('rate');
   s.luck += 0.12 * Save.rank('luck');
   s.data += 0.15 * Save.rank('data');
   const depth = (Game.run && Game.run.depth) || 1;
